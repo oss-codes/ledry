@@ -1,0 +1,233 @@
+:root {
+  color-scheme: dark;
+  --surface-canvas: #07111f;
+  --surface-panel: #0b1728;
+  --surface-raised: #112036;
+  --surface-hover: #172943;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-default: #334155;
+  --border-subtle: #1e293b;
+  --accent-primary: #38bdf8;
+  --accent-text: #7dd3fc;
+  --status-qualified: #4ade80;
+  --status-found: #f59e0b;
+  --status-rejected: #fb7185;
+  --status-error: #f87171;
+  --space-half: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  font-family:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--surface-canvas);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  color: var(--text-secondary);
+  background:
+    radial-gradient(
+      circle at 80% -20%,
+      color-mix(in srgb, var(--accent-primary) 9%, transparent),
+      transparent 36%
+    ),
+    var(--surface-canvas);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button,
+input,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--accent-text);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 120ms ease-out,
+    background 120ms ease-out,
+    border-color 120ms ease-out;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--text-muted);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button-primary {
+  color: var(--surface-canvas);
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--accent-text);
+  border-color: var(--accent-text);
+}
+
+.button-ghost {
+  background: transparent;
+}
+
+.button:disabled {
+  color: var(--text-muted);
+  background: var(--surface-panel);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  background: var(--surface-panel);
+}
+
+.panel-header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel-header h2 {
+  color: var(--accent-text);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.empty-state {
+  display: flex;
+  min-height: 144px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-6);
+  color: var(--text-muted);
+}
+
+.empty-state strong {
+  color: var(--text-secondary);
+}
+
+.skeleton-stack {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.skeleton-row {
+  height: 52px;
+  border-radius: var(--radius-control);
+  background: linear-gradient(
+    90deg,
+    var(--surface-raised),
+    var(--surface-hover),
+    var(--surface-raised)
+  );
+  background-size: 220% 100%;
+  animation: skeleton 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton {
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+  .skeleton-row {
+    animation: none;
+  }
+}

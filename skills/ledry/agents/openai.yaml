@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ledry"
+  short_description: "Research and extract leads through a connected browser"
+  default_prompt: "Use $ledry to find, review, and export leads through my connected browser session."
