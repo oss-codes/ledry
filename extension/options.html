@@ -16,7 +16,7 @@
   <body>
     <h1>Connect Ledry</h1>
     <p>Run <code>ledry pair</code>, then paste the local token below. The token never leaves this computer.</p>
-    <p>Open a source tab and click the extension toolbar icon to approve it. Only approved tabs are visible to the CLI.</p>
+    <p>Open a source tab, click the extension toolbar icon to open Ledry's side panel, and approve the origin there. Only approved tabs are visible to the CLI.</p>
     <form id="settings">
       <label for="port">Local port</label>
       <input id="port" type="number" min="1024" max="65535" value="43110" required>
@@ -24,11 +24,6 @@
       <input id="token" type="password" minlength="16" autocomplete="off" required>
       <button type="submit">Save and connect</button><span id="status"></span>
     </form>
-    <hr>
-    <h2>Approved source tabs</h2>
-    <p>Select a currently open tab. Approval is restricted to that tab and its current origin.</p>
-    <select id="tabs"></select>
-    <button id="approve" type="button">Approve selected tab</button><span id="approval-status"></span>
     <script type="module" src="dist/options.js"></script>
   </body>
 </html>

@@ -29,7 +29,7 @@ ledry navigate --tab 123 --url "https://www.google.com/search?q=coffee+roasters+
 ledry scroll --tab 123 --amount 1200
 ```
 
-`navigate` reuses a tab the user already approved from the extension toolbar, but only within that tab's approved origin. Chrome revokes temporary access when the origin changes, so the user must open and approve each new origin. It accepts public HTTP(S) destinations, rejects LinkedIn, and rejects cross-origin transitions. `scroll` accepts 100-3000 pixels. Both commands keep browser activity visible to the user.
+`navigate` reuses a tab the user already approved from Ledry's side panel, but only within that tab's approved origin. The toolbar icon opens the panel. Chrome revokes temporary access when the origin changes, so the user must open and approve each new origin. It accepts public HTTP(S) destinations, rejects LinkedIn, and rejects cross-origin transitions. `scroll` accepts 100-3000 pixels. Both commands keep browser activity visible to the user.
 
 ## Extraction
 

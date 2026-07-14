@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { isAllowedUrl } from "../extension/policy"
+import { isAllowedUrl, permissionPatternForUrl } from "../extension/policy"
 
 describe("source policy", () => {
   test("allows public HTTP sources", () => {
@@ -20,5 +20,19 @@ describe("source policy", () => {
   test("rejects privileged schemes", () => {
     expect(isAllowedUrl("file:///tmp/leads.html")).toBe(false)
     expect(isAllowedUrl("chrome://settings")).toBe(false)
+  })
+
+  test("rejects an incomplete browser URL without throwing", () => {
+    expect(isAllowedUrl("")).toBe(false)
+    expect(isAllowedUrl("not a URL")).toBe(false)
+  })
+
+  test("creates a permission pattern for only the approved origin", () => {
+    expect(permissionPatternForUrl("https://example.com/leads?page=2")).toBe(
+      "https://example.com/*",
+    )
+    expect(
+      permissionPatternForUrl("https://linkedin.com/company/example"),
+    ).toBe(null)
   })
 })

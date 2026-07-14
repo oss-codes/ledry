@@ -25,10 +25,28 @@ Design read: operational dashboard for nontechnical operators and agent-assisted
 | Found | `--status-found` | `#f59e0b` | Unreviewed found status |
 | Not qualified | `--status-rejected` | `#fb7185` | Not-qualified status |
 | Error | `--status-error` | `#f87171` | Failed requests and destructive feedback |
+| Side-panel canvas | `--sidepanel-canvas` | `#f8fafc` | Chrome companion workspace |
+| Side-panel surface | `--sidepanel-surface` | `#ffffff` | Composer and context cards |
+| Side-panel text | `--sidepanel-text` | `#0f172a` | Side-panel headings and body copy |
+| Side-panel muted | `--sidepanel-muted` | `#64748b` | Side-panel metadata and helper copy |
+| Side-panel border | `--sidepanel-border` | `#e2e8f0` | Side-panel separators and rings |
+| Side-panel strong border | `--sidepanel-border-strong` | `#94a3b8` | Form-control boundaries |
+| Side-panel hover | `--sidepanel-hover` | `#f1f5f9` | Hover and scope surfaces |
+| Side-panel accent | `--sidepanel-accent` | `#0284c7` | Active readiness state |
+| Side-panel accent strong | `--sidepanel-accent-strong` | `#0369a1` | Primary actions and focus |
+| Side-panel accent soft | `--sidepanel-accent-soft` | `#e0f2fe` | Approved-tab and selected controls |
+| Side-panel success | `--sidepanel-success` | `#15803d` | Connected and approved text |
+| Side-panel success soft | `--sidepanel-success-soft` | `#dcfce7` | Connected and approved surfaces |
+| Side-panel warning | `--sidepanel-warning` | `#b45309` | Approval-required text |
+| Side-panel warning soft | `--sidepanel-warning-soft` | `#fef3c7` | Approval-required surfaces |
+| Side-panel danger | `--sidepanel-danger` | `#be123c` | Offline, blocked, and error text |
+| Side-panel danger soft | `--sidepanel-danger-soft` | `#ffe4e6` | Offline, blocked, and error surfaces |
 
 Rules:
 
-- Dark theme is locked for parity with the OpenTUI application.
+- Dark theme is locked for the OpenTUI and browser dashboard. The Chrome side
+  panel is the deliberate companion exception: a cool paper-like workspace
+  framed by the browser chrome, using Ledry cyan instead of Claude terracotta.
 - Cyan is the only interaction accent. Status colors are semantic, never decorative.
 - Surfaces create hierarchy through tonal shifts; borders clarify dense controls.
 - New colors must be added here before use.
@@ -76,6 +94,10 @@ Layout:
 - Mobile: one column; detail opens below the selected lead and controls remain full width.
 - Breakpoints: 480px for compact actions, 768px for single-column mobile, and 1100px for the tablet source-rail transition.
 - Radius system: 6px controls, 8px panels, full-radius status filters only.
+  The Chrome side panel uses 8px controls and 12px cards so its compact paper
+  workspace remains legible against Chrome's own surrounding UI.
+- Chrome side panel: one column from 320px to 600px wide, fixed header and
+  composer, flexible conversation/activity region, and `100dvh` height.
 
 ## 5. Components
 
@@ -120,6 +142,48 @@ Layout:
 - Variants: success, error, neutral.
 - States: visible and auto-dismissed after four seconds in the product workspace.
 - Accessibility: `role=status` for neutral/success and `role=alert` for errors.
+
+### SidePanelShell
+
+- Structure: compact brand header, active-tab context, task/activity region,
+  and bottom composer. This borrows the public Claude extension's companion
+  panel anatomy without its branding, copy, or assets.
+- States: configuring, bridge offline, no active research tab, tab blocked, tab
+  awaiting approval, and approved and ready.
+- Accessibility: one `main` region, descriptive connection status, logical
+  heading order, and no icon-only control without an accessible name.
+
+### TabContextCard
+
+- Structure: source icon, tab title, origin, approval state, and one explicit
+  approve action.
+- States: blocked, awaiting approval, approving, approved, and error.
+- Accessibility: approval is textual as well as chromatic; the action remains
+  at least 40px tall and never grants cross-origin access implicitly.
+
+### TaskComposer
+
+- Structure: labelled multiline research brief, truthful approved-origin scope,
+  and primary local-save action. Saving a brief does not imply that an agent
+  has started executing it.
+- States: empty, focused, ready, saving, saved, and error.
+- Accessibility: visible label, `aria-describedby` helper copy, keyboard submit
+  with Command/Ctrl+Enter, and persistent focus-visible ring.
+
+### ReadinessStep
+
+- Structure: semantic ordered item with status marker, title, and supporting
+  detail.
+- States: pending, active, complete, and blocked.
+- Accessibility: visible text describes status; motion and color are never the
+  only indicators.
+
+### IconButton
+
+- Structure: semantic button with inline SVG and accessible name.
+- States: default, hover, active, focus-visible, and disabled.
+- Accessibility: 40px minimum target; SVG is decorative when the button label
+  already supplies the name.
 
 ### Primitive Showcase
 

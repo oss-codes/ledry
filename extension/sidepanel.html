@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>Ledry</title>
+    <link rel="stylesheet" href="dist/sidepanel.css" />
+  </head>
+  <body>
+    <div class="sidepanel-shell">
+      <header class="panel-header">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">L</span>
+          <span class="brand-name">Ledry</span>
+        </div>
+        <div class="header-actions">
+          <span id="connection-status" class="connection-pill" data-state="offline" role="status" aria-live="polite">Offline</span>
+          <button id="open-dashboard" class="icon-button" type="button" aria-label="Open Ledry dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v4h-7V4ZM4 13h7v7H4v-7Zm9-3h7v10h-7V10Z" /></svg>
+          </button>
+          <button id="open-settings" class="icon-button" type="button" aria-label="Open extension settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.7a3.3 3.3 0 1 0 0 6.6 3.3 3.3 0 0 0 0-6.6Zm8.1 4.5v-2.4l-2-.6a7 7 0 0 0-.7-1.7l1-1.8-1.7-1.7-1.8 1a7 7 0 0 0-1.7-.7l-.6-2h-2.4l-.6 2a7 7 0 0 0-1.7.7l-1.8-1-1.7 1.7 1 1.8a7 7 0 0 0-.7 1.7l-2 .6v2.4l2 .6a7 7 0 0 0 .7 1.7l-1 1.8 1.7 1.7 1.8-1a7 7 0 0 0 1.7.7l.6 2h2.4l.6-2a7 7 0 0 0 1.7-.7l1.8 1 1.7-1.7-1-1.8a7 7 0 0 0 .7-1.7l2-.6Z" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="panel-main">
+        <section id="tab-context" class="tab-context" data-state="empty" aria-labelledby="tab-title">
+          <div class="context-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm2 2v2h12V7H6Zm0 4v6h12v-6H6Z" /></svg>
+          </div>
+          <div class="context-copy">
+            <div class="context-title-row">
+              <p id="tab-title" class="context-title">No active research tab</p>
+              <span id="tab-badge" class="approval-badge" role="status" aria-live="polite">No tab</span>
+            </div>
+            <p id="tab-origin">Open a public website to continue</p>
+          </div>
+        </section>
+
+        <section id="workspace" class="workspace" aria-labelledby="workspace-title" data-has-brief="false">
+          <div class="workspace-intro">
+            <div class="workspace-symbol" aria-hidden="true">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5 19 13l10.5 3L19 19l-3 10.5L13 19 2.5 16 13 13l3-10.5Z" /></svg>
+            </div>
+            <p class="eyebrow">Browser research agent</p>
+            <h1 id="workspace-title" tabindex="-1">Ready to research</h1>
+            <p id="workspace-description" class="workspace-description">Connect Ledry and approve a public source to begin.</p>
+            <button id="approve-tab" class="button button-primary" type="button">Approve this tab</button>
+            <button id="configure-ledry" class="button button-secondary" type="button" hidden>Open settings</button>
+          </div>
+
+          <div id="brief-thread" class="brief-thread" hidden>
+            <article class="thread-message thread-message-user">
+              <p class="thread-label">Your research brief</p>
+              <p id="brief-summary"></p>
+            </article>
+            <article class="thread-message thread-message-ledry">
+              <span class="thread-avatar" aria-hidden="true">L</span>
+              <div>
+                <p class="thread-label">Ledry</p>
+                <p>Brief saved in this browser profile. Start a connected agent when you are ready.</p>
+              </div>
+            </article>
+          </div>
+
+          <ol class="activity-list" aria-label="Research readiness" aria-live="polite">
+            <li id="activity-bridge" class="activity-step" data-state="pending">
+              <span class="activity-marker" aria-hidden="true"></span>
+              <span class="activity-copy">
+                <span class="activity-heading"><strong>Local bridge</strong><span id="activity-bridge-label" class="activity-status">Pending</span></span>
+                <small>Connects agents without exposing browser cookies.</small>
+              </span>
+            </li>
+            <li id="activity-approval" class="activity-step" data-state="pending">
+              <span class="activity-marker" aria-hidden="true"></span>
+              <span class="activity-copy">
+                <span class="activity-heading"><strong>Tab permission</strong><span id="activity-approval-label" class="activity-status">Pending</span></span>
+                <small>Access stays limited to the origin you approve.</small>
+              </span>
+            </li>
+            <li id="activity-research" class="activity-step" data-state="pending">
+              <span class="activity-marker" aria-hidden="true"></span>
+              <span class="activity-copy">
+                <span class="activity-heading"><strong>Lead capture</strong><span id="activity-research-label" class="activity-status">Waiting</span></span>
+                <small>Connected agents can extract and qualify evidence.</small>
+              </span>
+            </li>
+          </ol>
+        </section>
+      </main>
+
+      <form id="brief-form" class="task-composer" novalidate>
+        <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+        <label for="research-brief">Research brief</label>
+        <textarea id="research-brief" name="brief" rows="2" maxlength="2000" required aria-describedby="brief-help" placeholder="Describe the leads you want to find..."></textarea>
+        <div class="composer-footer">
+          <span class="scope-pill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h2v11H5V10h2Zm2 0h6V8a3 3 0 0 0-6 0v2Z" /></svg>Approved origin only</span>
+          <button id="save-brief" class="send-button" type="submit" aria-label="Save research brief">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 7 7-1.4 1.4-4.6-4.6V20h-2V7.8l-4.6 4.6L5 11l7-7Z" /></svg>
+          </button>
+        </div>
+        <p id="brief-help" class="sr-only">Saved in this browser profile. Press Ctrl or Command plus Enter to save.</p>
+      </form>
+
+    </div>
+    <script type="module" src="dist/sidepanel.js"></script>
+  </body>
+</html>

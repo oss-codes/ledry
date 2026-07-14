@@ -35,7 +35,7 @@ bun link
 ledry pair
 ```
 
-Open `chrome://extensions`, enable Developer mode, select **Load unpacked**, and choose the printed `extension` directory. Paste the port and token shown by `ledry pair` into the extension options page. Open a source tab and click the extension toolbar icon to approve that specific tab; the CLI cannot see or extract unapproved tabs.
+Open `chrome://extensions`, enable Developer mode, select **Load unpacked**, and choose the printed `extension` directory. Paste the port and token shown by `ledry pair` into the extension options page. Open a source tab, click the extension toolbar icon to open Ledry's side panel, then approve that origin in the panel. The CLI cannot see or extract unapproved tabs.
 
 Start the interactive application:
 
@@ -87,7 +87,7 @@ The format and install locations are documented by [Claude Code](https://code.cl
 - The dashboard uses an HttpOnly same-site session cookie; state-changing browser requests must be same-origin.
 - Extension connections require a generated local token.
 - Browser session cookies are never sent to the CLI.
-- Chrome permissions are limited to tabs, scripting, storage, and per-origin HTTP(S) access granted when the user approves a tab.
+- Chrome permissions are limited to the side panel, tabs, scripting, storage, and per-origin HTTP(S) access granted when the user approves a tab.
 - The extension rejects LinkedIn tabs.
 - Lead fields retain source URLs and field-level evidence.
 

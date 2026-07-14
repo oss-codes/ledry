@@ -1,32 +1,27 @@
 import { type BrowserCommand, BrowserCommandSchema } from "../src/schemas"
 import {
   approvedTabs,
-  approveTab,
   assertApprovedTab,
   navigateApprovedTab,
 } from "./approved-tabs"
 import { isAllowedUrl } from "./policy"
+import {
+  readExtensionConfig,
+  registerSidepanelMessages,
+} from "./sidepanel-service"
+import { connectionConfigChanged } from "./storage-policy"
 
 let socket: WebSocket | undefined
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined
 let keepaliveTimer: ReturnType<typeof setInterval> | undefined
-
-async function readConfig(): Promise<{
-  readonly port: number
-  readonly token: string
-}> {
-  const values = await chrome.storage.local.get(["port", "token"])
-  return {
-    port: typeof values["port"] === "number" ? values["port"] : 43110,
-    token: typeof values["token"] === "string" ? values["token"] : "",
-  }
-}
+let bridgeAuthenticated = false
 
 function connect(): void {
   if (socket !== undefined) return
+  bridgeAuthenticated = false
   if (reconnectTimer !== undefined) clearTimeout(reconnectTimer)
   reconnectTimer = undefined
-  void readConfig().then((config) => {
+  void readExtensionConfig().then((config) => {
     if (config.token.length < 16) return
     const nextSocket = new WebSocket(`ws://127.0.0.1:${config.port}/extension`)
     const hello = JSON.stringify({
@@ -59,6 +54,7 @@ function connect(): void {
 function scheduleReconnect(closedSocket: WebSocket): void {
   if (socket !== closedSocket) return
   socket = undefined
+  bridgeAuthenticated = false
   if (keepaliveTimer !== undefined) clearInterval(keepaliveTimer)
   keepaliveTimer = undefined
   void chrome.action.setBadgeText({ text: "" })
@@ -88,6 +84,7 @@ async function handleMessage(
     "type" in decoded &&
     decoded.type === "hello_ack"
   ) {
+    bridgeAuthenticated = true
     void chrome.action.setBadgeText({ text: "ON" })
     void chrome.action.setBadgeBackgroundColor({ color: "#16a34a" })
     return
@@ -173,13 +170,15 @@ async function execute(command: BrowserCommand): Promise<unknown> {
   }
 }
 
-chrome.storage.onChanged.addListener((_changes, areaName) => {
-  if (areaName !== "local") return
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (!connectionConfigChanged(changes, areaName)) return
   if (socket === undefined) connect()
   else socket.close()
 })
-chrome.runtime.onInstalled.addListener(
-  () => void chrome.runtime.openOptionsPage(),
-)
-chrome.action.onClicked.addListener((tab) => void approveTab(tab))
+registerSidepanelMessages(() => bridgeAuthenticated)
+chrome.runtime.onInstalled.addListener(() => {
+  void chrome.runtime.openOptionsPage()
+  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+})
+void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
 connect()

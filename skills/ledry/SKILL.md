@@ -16,7 +16,7 @@ Run `ledry --help`. If it is unavailable and the current repository contains `sr
 1. Run `ledry doctor`.
 2. If the daemon is unavailable, start `ledry dashboard --no-open` in a managed background terminal. This also serves the browser workspace at the printed loopback URL. Use `ledry serve` when no human dashboard is needed.
 3. If the extension is offline, stop and ask the user to run `ledry pair` themselves in a separate terminal, load the printed extension directory in `chrome://extensions`, and enter the local port and token in its options page. The agent must never execute `pair`, because command output contains the secret token.
-4. Ask the user to open each intended source tab and click the extension toolbar icon to approve it.
+4. Ask the user to open each intended source tab, click the extension toolbar icon to open Ledry's side panel, and approve that origin in the panel.
 5. Run `ledry doctor` again. Continue only when it reports `Extension: connected`.
 
 Never print, copy into chat, or transmit the pairing token. Let the user read it directly from their terminal.

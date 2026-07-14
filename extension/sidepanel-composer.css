@@ -1,0 +1,158 @@
+.task-composer {
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  background: rgb(255 255 255 / 96%);
+  border-top: 1px solid var(--sidepanel-border);
+  box-shadow: 0 -12px 30px rgb(15 23 42 / 5%);
+  backdrop-filter: blur(14px);
+}
+
+.task-composer label {
+  color: var(--sidepanel-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.task-composer textarea {
+  width: 100%;
+  min-height: 52px;
+  max-height: 150px;
+  padding: 11px 12px;
+  resize: vertical;
+  color: var(--sidepanel-text);
+  font-size: 13px;
+  line-height: 1.45;
+  background: var(--sidepanel-canvas);
+  border: 1px solid var(--sidepanel-border-strong);
+  border-radius: 10px;
+  transition:
+    background 120ms ease-out,
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+
+.task-composer textarea:hover {
+  border-color: var(--sidepanel-muted);
+}
+
+.task-composer textarea:focus {
+  background: white;
+  border-color: var(--sidepanel-accent);
+  box-shadow: 0 0 0 3px rgb(14 165 233 / 9%);
+}
+
+.task-composer textarea::placeholder {
+  color: var(--sidepanel-muted);
+}
+
+.composer-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scope-pill {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--sidepanel-text);
+  font-size: 12px;
+  font-weight: 650;
+  background: var(--sidepanel-hover);
+  border: 1px solid var(--sidepanel-border);
+  border-radius: var(--radius-control);
+}
+
+.scope-pill svg {
+  width: 14px;
+  fill: currentcolor;
+}
+
+.send-button {
+  display: grid;
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  place-items: center;
+  color: white;
+  cursor: pointer;
+  background: var(--sidepanel-accent-strong);
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgb(3 105 161 / 20%);
+  transition:
+    background 120ms ease-out,
+    transform 120ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.send-button:hover {
+  background: #075985;
+}
+
+.send-button:active {
+  transform: translateY(1px);
+}
+
+.send-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.send-button svg {
+  width: 18px;
+  fill: currentcolor;
+}
+
+.send-button[data-busy="true"] svg {
+  animation: send-pulse 900ms ease-in-out infinite alternate;
+}
+
+.toast {
+  display: grid;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 8px;
+  color: white;
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.3;
+  text-align: center;
+  background: #0f172a;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 9px;
+  box-shadow: var(--sidepanel-shadow);
+  place-items: center;
+}
+
+.toast[hidden] {
+  display: grid;
+  visibility: hidden;
+}
+
+.toast[data-kind="error"] {
+  background: #9f1239;
+}
+
+@keyframes send-pulse {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-height: 720px) {
+  .task-composer textarea {
+    min-height: 54px;
+  }
+}

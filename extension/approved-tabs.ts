@@ -48,7 +48,7 @@ export async function assertApprovedTab(tabId: number): Promise<void> {
       (item) => item.id === tabId && item.origin === origin,
     )
   )
-    throw new Error("Approve this tab from the extension toolbar first")
+    throw new Error("Approve this origin from the Ledry side panel first")
   await chrome.scripting.executeScript({
     target: { tabId },
     files: ["dist/content-script.js"],
@@ -60,11 +60,11 @@ export async function approveTab(tab: chrome.tabs.Tab): Promise<void> {
     await chrome.action.setBadgeText({ text: "NO", tabId: tab.id })
     return
   }
-  await rememberApprovedTab(tab.id, new URL(tab.url).origin)
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     files: ["dist/content-script.js"],
   })
+  await rememberApprovedTab(tab.id, new URL(tab.url).origin)
   await chrome.action.setBadgeText({ text: "OK", tabId: tab.id })
   await chrome.action.setBadgeBackgroundColor({
     color: "#16a34a",
