@@ -90,10 +90,27 @@ export function Showcase() {
                 Saving...
               </Button>
             </div>
-            <StatusControl value="found" onChange={() => undefined} />
-            <StatusControl value="qualified" onChange={() => undefined} />
-            <StatusControl value="not-qualified" onChange={() => undefined} />
-            <StatusControl disabled value="found" onChange={() => undefined} />
+            <StatusControl
+              label="Found example"
+              value="found"
+              onChange={() => undefined}
+            />
+            <StatusControl
+              label="Qualified example"
+              value="qualified"
+              onChange={() => undefined}
+            />
+            <StatusControl
+              label="Not qualified example"
+              value="not-qualified"
+              onChange={() => undefined}
+            />
+            <StatusControl
+              label="Disabled example"
+              disabled
+              value="found"
+              onChange={() => undefined}
+            />
           </div>
         </Panel>
         <Panel title="Loading and empty states">

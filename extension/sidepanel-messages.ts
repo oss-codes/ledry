@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { ResearchRunSchema } from "../src/schemas"
 
 export const SidepanelTabStateSchema = z.enum([
   "blocked",
@@ -18,6 +19,7 @@ export const SidepanelStatusSchema = z.object({
   bridgeConnected: z.boolean(),
   configReady: z.boolean(),
   currentBrief: z.string().max(2_000),
+  lastRun: ResearchRunSchema.nullable(),
   tab: SidepanelTabSchema.nullable(),
 })
 
@@ -33,6 +35,11 @@ export const SidepanelRequestSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("sidepanel.brief.save"),
     brief: z.string().trim().min(1).max(2_000),
+  }),
+  z.object({
+    type: z.literal("sidepanel.capture"),
+    tabId: z.number().int().nonnegative(),
+    limit: z.number().int().min(1).max(25),
   }),
 ])
 

@@ -6,6 +6,7 @@ const SOCIAL_HOSTS = [
   "tiktok.com",
   "x.com",
   "youtube.com",
+  "linkedin.com",
 ] as const
 const GOOGLE_SUFFIX = /^(?:com|cat|[a-z]{2}|(?:co|com)\.[a-z]{2})$/
 

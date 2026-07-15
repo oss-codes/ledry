@@ -15,5 +15,5 @@ test("browser extractors pass website, Google Search, and Google Maps fixtures",
   ])
   expect(stderr).toBe("")
   expect(exitCode).toBe(0)
-  expect(stdout).toContain("3 extractor fixtures passed")
+  expect(stdout).toContain("6 extractor fixtures passed")
 })

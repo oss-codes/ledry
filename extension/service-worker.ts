@@ -1,10 +1,24 @@
-import { type BrowserCommand, BrowserCommandSchema } from "../src/schemas"
 import {
-  approvedTabs,
+  type BrowserCommand,
+  BrowserCommandSchema,
+  ExtensionCaptureAckSchema,
+  type Lead,
+  LeadSchema,
+  type ResearchRun,
+} from "../src/schemas"
+import {
   assertApprovedTab,
+  listApprovedTabs,
   navigateApprovedTab,
 } from "./approved-tabs"
-import { isAllowedUrl } from "./policy"
+import {
+  CAPTURE_RETRY_TTL_MS,
+  type CaptureRetryStorage,
+  clearRetryableCapture,
+  createCaptureSignature,
+  loadRetryableCapture,
+  saveRetryableCapture,
+} from "./capture-retry"
 import {
   readExtensionConfig,
   registerSidepanelMessages,
@@ -15,6 +29,25 @@ let socket: WebSocket | undefined
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined
 let keepaliveTimer: ReturnType<typeof setInterval> | undefined
 let bridgeAuthenticated = false
+const captureRetryStorage: CaptureRetryStorage = {
+  async get(key) {
+    return await chrome.storage.session.get(key)
+  },
+  async remove(key) {
+    await chrome.storage.session.remove(key)
+  },
+  async set(values) {
+    await chrome.storage.session.set(values)
+  },
+}
+const pendingCaptures = new Map<
+  string,
+  {
+    readonly reject: (error: Error) => void
+    readonly resolve: (run: ResearchRun) => void
+    readonly timer: ReturnType<typeof setTimeout>
+  }
+>()
 
 function connect(): void {
   if (socket !== undefined) return
@@ -57,9 +90,20 @@ function scheduleReconnect(closedSocket: WebSocket): void {
   bridgeAuthenticated = false
   if (keepaliveTimer !== undefined) clearInterval(keepaliveTimer)
   keepaliveTimer = undefined
+  rejectPendingCaptures(
+    new Error("The Ledry bridge disconnected during capture"),
+  )
   void chrome.action.setBadgeText({ text: "" })
   if (reconnectTimer !== undefined) clearTimeout(reconnectTimer)
   reconnectTimer = setTimeout(connect, 2_000)
+}
+
+function rejectPendingCaptures(error: Error): void {
+  for (const pending of pendingCaptures.values()) {
+    clearTimeout(pending.timer)
+    pending.reject(error)
+  }
+  pendingCaptures.clear()
 }
 
 async function handleMessage(
@@ -87,6 +131,18 @@ async function handleMessage(
     bridgeAuthenticated = true
     void chrome.action.setBadgeText({ text: "ON" })
     void chrome.action.setBadgeBackgroundColor({ color: "#16a34a" })
+    return
+  }
+  const captureAck = ExtensionCaptureAckSchema.safeParse(decoded)
+  if (captureAck.success) {
+    const pending = pendingCaptures.get(captureAck.data.requestId)
+    if (pending === undefined) return
+    clearTimeout(pending.timer)
+    pendingCaptures.delete(captureAck.data.requestId)
+    await clearRetryableCapture(captureRetryStorage, captureAck.data.requestId)
+    if (captureAck.data.ok) {
+      pending.resolve(captureAck.data.run)
+    } else pending.reject(new Error(captureAck.data.error))
     return
   }
   if (
@@ -120,27 +176,77 @@ async function handleMessage(
   }
 }
 
+async function captureFromPanel(
+  tabId: number,
+  limit: number,
+  brief: string,
+): Promise<ResearchRun> {
+  await assertApprovedTab(tabId)
+  const activeSocket = socket
+  if (
+    activeSocket === undefined ||
+    activeSocket.readyState !== WebSocket.OPEN ||
+    !bridgeAuthenticated
+  )
+    throw new Error("Start the Ledry bridge before capturing leads")
+  const leads = LeadSchema.array()
+    .max(500)
+    .parse(
+      await chrome.tabs.sendMessage(tabId, {
+        action: "extract",
+        sourceType: "auto",
+      }),
+    ) satisfies readonly Lead[]
+  const tab = await chrome.tabs.get(tabId)
+  if (tab.url === undefined)
+    throw new Error("The browser did not report the approved tab URL")
+  const signature = await createCaptureSignature({
+    brief,
+    leads,
+    limit,
+    tabId,
+    tabUrl: tab.url,
+  })
+  const retryableCapture = await loadRetryableCapture(captureRetryStorage)
+  const requestId =
+    retryableCapture !== undefined && retryableCapture.signature === signature
+      ? retryableCapture.requestId
+      : crypto.randomUUID()
+  await saveRetryableCapture(captureRetryStorage, {
+    expiresAt: Date.now() + CAPTURE_RETRY_TTL_MS,
+    requestId,
+    signature,
+  })
+  return await new Promise<ResearchRun>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pendingCaptures.delete(requestId)
+      reject(new Error("Lead capture timed out"))
+    }, 20_000)
+    pendingCaptures.set(requestId, { reject, resolve, timer })
+    try {
+      activeSocket.send(
+        JSON.stringify({
+          type: "capture",
+          requestId,
+          tabId,
+          sourceType: "auto",
+          limit,
+          brief,
+          leads,
+        }),
+      )
+    } catch (error) {
+      clearTimeout(timer)
+      pendingCaptures.delete(requestId)
+      reject(error instanceof Error ? error : new Error("Capture failed"))
+    }
+  })
+}
+
 async function execute(command: BrowserCommand): Promise<unknown> {
   switch (command.action) {
     case "tabs.list": {
-      const [tabs, approved] = await Promise.all([
-        chrome.tabs.query({}),
-        approvedTabs(),
-      ])
-      return tabs.flatMap((tab) => {
-        if (
-          tab.id === undefined ||
-          tab.url === undefined ||
-          !isAllowedUrl(tab.url)
-        )
-          return []
-        const origin = new URL(tab.url).origin
-        return approved.some(
-          (item) => item.id === tab.id && item.origin === origin,
-        )
-          ? [{ id: tab.id, title: tab.title ?? "Untitled", url: tab.url }]
-          : []
-      })
+      return await listApprovedTabs()
     }
     case "tab.attach":
       await assertApprovedTab(command.tabId)
@@ -175,7 +281,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (socket === undefined) connect()
   else socket.close()
 })
-registerSidepanelMessages(() => bridgeAuthenticated)
+registerSidepanelMessages(() => bridgeAuthenticated, captureFromPanel)
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.runtime.openOptionsPage()
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })

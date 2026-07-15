@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Connect approved browser tabs to the local Ledry.",
   "minimum_chrome_version": "116",
-  "permissions": ["scripting", "sidePanel", "storage", "tabs"],
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": {
     "service_worker": "dist/service-worker.js",

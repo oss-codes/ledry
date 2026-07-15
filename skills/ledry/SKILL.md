@@ -1,6 +1,6 @@
 ---
 name: ledry
-description: Find, extract, review, and export business leads through the user's connected Chrome session with Ledry. Use for Google Maps research, public website contact discovery, approved social-source research, lead list creation, deduplication, evidence review, and CSV/JSONL export. Never use for LinkedIn, private data, messaging, engagement automation, access-control bypass, or CAPTCHA circumvention.
+description: Find, extract, review, and export public business leads through the user's connected Chrome session with Ledry. Use for Google Maps, Google Search, websites, Instagram business pages, LinkedIn company or school pages, evidence review, durable run reports, and verified CSV/JSONL export. Never use for personal profiles, private data, messaging, engagement automation, access-control bypass, or CAPTCHA circumvention.
 ---
 
 # Ledry
@@ -25,17 +25,17 @@ Never print, copy into chat, or transmit the pairing token. Let the user read it
 
 1. Establish the requested niche, geography, evidence fields, and maximum lead count from the user's request. Ask only when a missing value materially changes the result.
 2. Run `ledry tabs --json` and select only a user-approved, relevant tab.
-3. Reuse an approved tab only within its current origin with `ledry navigate --tab <id> --url <same-origin-public-http-url>`. Chrome revokes temporary access when an origin changes, so ask the user to open and approve each new origin before continuing. Navigation always rejects LinkedIn. Never navigate outside the user's requested research scope.
+3. Reuse an approved tab only within its current origin with `ledry navigate --tab <id> --url <same-origin-public-http-url>`. Chrome revokes temporary access when an origin changes, so ask the user to open and approve each new origin before continuing. LinkedIn is limited to public company and school pages. Never navigate outside the user's requested research scope.
 4. Use `ledry scroll --tab <id> --amount 1200` to reveal more results when needed. Re-list tabs after navigation and stop if the approved tab is no longer available.
 5. Choose the adapter:
    - Google Maps result page: `google-maps`
    - Google Search result page: `google-search`
-   - Public business website: `website`
-   - User-approved public social page: `social`
-6. Run `ledry scrape --tab <id> --source <adapter>`.
+   - Public website with explicit organization evidence: `website`
+   - Public social page with explicit business evidence: `social`
+6. Prefer `ledry research --tab <id> --source auto --limit <count> --brief "<scope>" --out <path>` so capture, persistence, reporting, and export share one run. Use `scrape` only for a raw compatibility capture.
 7. Review returned `sourceUrl`, `evidence`, and `confidence`. Treat inferred fields as uncertain; do not manufacture missing details.
 8. Repeat only within the user's scope and reasonable source limits.
-9. Export with `ledry leads --format jsonl --out leads.jsonl` or `--format csv --out leads.csv`.
+9. Verify with `ledry report --run latest`, then use `ledry export --run latest --format csv --out leads.csv` for a run-scoped export.
 
 ## Qualify saved leads
 
@@ -56,7 +56,8 @@ Read [references/commands.md](references/commands.md) for command contracts. Rea
 
 Stop and explain when:
 
-- the source is LinkedIn;
+- the source is a personal LinkedIn profile, feed, message, account, or settings page;
+- a website or social page is ambiguous and does not expose explicit organization or business-page evidence;
 - the requested data is private, gated, sensitive, or unrelated to legitimate lead research;
 - the workflow requires login evasion, CAPTCHA bypass, proxies intended to evade controls, or hidden API extraction;
 - the user asks to send messages, follow accounts, or automate engagement;

@@ -28,7 +28,7 @@ const savedLead = {
   evidence: [],
   confidence: 0.87,
   score: 82,
-  tags: [],
+  tags: ["public-business-page"],
 } satisfies Lead
 
 afterEach(() => {
@@ -59,7 +59,7 @@ async function connectedHarness(): Promise<{
         JSON.stringify({
           type: "hello",
           token: config.token,
-          clientId: "test-extension",
+          clientId: "testextensionid",
           version: "0.1.0",
         }),
       )
@@ -176,6 +176,127 @@ describe("local bridge", () => {
     socket.close()
   })
 
+  test("creates a capped durable run from dynamic extension extraction", async () => {
+    const { client, socket } = await connectedHarness()
+    socket.addEventListener("message", (event) => {
+      const message = JSON.parse(String(event.data))
+      if (message.action !== "leads.extract") return
+      socket.send(
+        JSON.stringify({
+          type: "result",
+          requestId: message.requestId,
+          ok: true,
+          data: Array.from({ length: 7 }, (_, index) => ({
+            ...savedLead,
+            id: `lead_dynamic_${index}`,
+            sourceUrl: `https://katha.example/?location=${index}`,
+          })),
+        }),
+      )
+    })
+
+    const result = await client.research({
+      brief: "Coffee roasters in Pune",
+      limit: 5,
+      sourceType: "auto",
+      tabId: 7,
+    })
+
+    expect(result.run.saved).toBe(5)
+    expect(result.run.skipped).toBe(2)
+    expect(result.records).toHaveLength(5)
+    expect(await client.runs()).toEqual([result.run])
+    expect(await client.runRecords(result.run.id)).toEqual(result.records)
+    socket.close()
+  })
+
+  test("applies public-business guardrails to legacy extraction", async () => {
+    const { client, socket } = await connectedHarness()
+    socket.addEventListener("message", (event) => {
+      const message = JSON.parse(String(event.data))
+      if (message.action !== "leads.extract") return
+      socket.send(
+        JSON.stringify({
+          type: "result",
+          requestId: message.requestId,
+          ok: true,
+          data: [
+            {
+              ...savedLead,
+              id: "lead_google_redirect",
+              website: "https://www.google.com/searchviewer/redirect",
+            },
+            {
+              ...savedLead,
+              id: "lead_private_profile",
+              name: "Private profile",
+              sourceType: "social",
+              sourceUrl: "https://www.linkedin.com/in/private-profile",
+            },
+          ],
+        }),
+      )
+    })
+
+    const leads = await client.extract(7, "auto")
+
+    expect(leads).toHaveLength(1)
+    expect(leads[0]?.id).toBe("lead_google_redirect")
+    expect(leads[0]?.website).toBe("")
+    expect(await client.leads()).toEqual(leads)
+    socket.close()
+  })
+
+  test("persists a side-panel capture and acknowledges the exact run", async () => {
+    const { client, socket } = await connectedHarness()
+    const requestId = crypto.randomUUID()
+    const acknowledgements: Record<string, unknown>[] = []
+    const acknowledgedTwice = new Promise<void>((resolve, reject) => {
+      socket.addEventListener("message", (event) => {
+        const message = JSON.parse(String(event.data))
+        if (message.type !== "capture_ack" || message.requestId !== requestId)
+          return
+        acknowledgements.push(message)
+        if (acknowledgements.length === 1)
+          socket.send(
+            JSON.stringify({
+              type: "capture",
+              requestId,
+              tabId: 7,
+              sourceType: "auto",
+              limit: 5,
+              brief: "Panel coffee capture",
+              leads: [savedLead],
+            }),
+          )
+        if (acknowledgements.length === 2) resolve()
+      })
+      socket.addEventListener("error", reject)
+    })
+    socket.send(
+      JSON.stringify({
+        type: "capture",
+        requestId,
+        tabId: 7,
+        sourceType: "auto",
+        limit: 5,
+        brief: "Panel coffee capture",
+        leads: [savedLead],
+      }),
+    )
+
+    await acknowledgedTwice
+    const result = acknowledgements[0]
+    if (result === undefined) throw new Error("Capture acknowledgement missing")
+    expect(result["ok"]).toBe(true)
+    expect(acknowledgements[1]?.["run"]).toEqual(result["run"])
+    const runs = await client.runs()
+    expect(runs).toHaveLength(1)
+    expect(runs[0]?.brief).toBe("Panel coffee capture")
+    expect(await client.runRecords(runs[0]?.id ?? "missing")).toHaveLength(1)
+    socket.close()
+  })
+
   test("rejects a second authenticated extension socket", async () => {
     const { socket } = await connectedHarness()
     const port = servers[0]?.port
@@ -229,7 +350,13 @@ describe("local bridge", () => {
     const directory = mkdtempSync(join(tmpdir(), "ledry-dashboard-"))
     directories.push(directory)
     const store = new LeadStore(join(directory, "leads.sqlite"))
-    store.save([savedLead])
+    const run = store.captureRun({
+      brief: "Dashboard export",
+      leads: [savedLead],
+      limit: 5,
+      requestedSource: "website",
+      tabId: 1,
+    })
     const config = {
       token: "test_token_1234567890",
       port: 0,
@@ -286,6 +413,14 @@ describe("local bridge", () => {
       qualificationStatus: "qualified",
     })
     expect(store.listRecords()[0]?.qualificationStatus).toBe("qualified")
+    expect(store.updateQualification(savedLead.id, "not-qualified")).toBeTrue()
+    const runExport = await fetch(
+      `${origin}/api/export?format=csv&run=${encodeURIComponent(run.id)}`,
+      { headers: { Cookie: cookie } },
+    )
+    const runCsv = await runExport.text()
+    expect(runCsv).toContain("Katha Coffee Works")
+    expect(runCsv).toContain("not-qualified")
   })
 
   test("allows authenticated CLI clients to update qualification", async () => {

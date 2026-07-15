@@ -133,8 +133,7 @@
 }
 
 .toast[hidden] {
-  display: grid;
-  visibility: hidden;
+  display: none;
 }
 
 .toast[data-kind="error"] {

@@ -47,6 +47,7 @@ export function LeadDetail({
             <span className="score mono">{record.lead.score}/100</span>
           </div>
           <StatusControl
+            label={`Qualification for ${record.lead.name} in lead detail`}
             disabled={saving}
             onChange={onQualify}
             value={record.qualificationStatus}

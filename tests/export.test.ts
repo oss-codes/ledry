@@ -1,5 +1,12 @@
-import { describe, expect, test } from "bun:test"
-import { serializeLeadRecords, serializeLeads } from "../src/export"
+import { afterEach, describe, expect, test } from "bun:test"
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import {
+  serializeLeadRecords,
+  serializeLeads,
+  writeVerifiedExport,
+} from "../src/export"
 import type { Lead } from "../src/schemas"
 
 const lead = {
@@ -26,6 +33,13 @@ const lead = {
   score: 75,
   tags: ["local"],
 } satisfies Lead
+
+const directories: string[] = []
+
+afterEach(() => {
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true })
+})
 
 describe("lead serialization", () => {
   test("escapes CSV cells", () => {
@@ -55,5 +69,19 @@ describe("lead serialization", () => {
     )
     expect(output).toContain("qualificationStatus")
     expect(output).toContain('"qualified"')
+  })
+
+  test("atomically writes and verifies the requested export path", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "ledry-export-"))
+    directories.push(directory)
+    const path = join(directory, "nested", "leads.csv")
+    const output = serializeLeads([lead], "csv")
+
+    const result = await writeVerifiedExport(path, output, 1)
+
+    expect(readFileSync(path, "utf8")).toBe(output)
+    expect(result.path).toBe(path)
+    expect(result.records).toBe(1)
+    expect(statSync(path).mode & 0o777).toBe(0o600)
   })
 })

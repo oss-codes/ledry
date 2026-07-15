@@ -3,6 +3,7 @@ import {
   type ExtensionMessage,
   type Lead,
   LeadSchema,
+  type RequestedSource,
   type Tab,
   TabSchema,
 } from "./schemas"
@@ -68,7 +69,7 @@ export class BrowserBridge {
 
   async extract(
     tabId: number,
-    sourceType: "google-maps" | "google-search" | "website" | "social",
+    sourceType: RequestedSource,
   ): Promise<readonly Lead[]> {
     const data = await this.#send({
       requestId: crypto.randomUUID(),

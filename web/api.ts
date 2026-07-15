@@ -2,12 +2,13 @@ import type {
   DashboardSnapshot,
   LeadRecord,
   QualificationStatus,
-  SourceType,
+  RequestedSource,
+  ResearchResult,
 } from "../src/schemas"
 import {
   DashboardSnapshotSchema,
   LeadRecordSchema,
-  LeadRecordsSchema,
+  ResearchResultSchema,
 } from "./schemas"
 
 type Parser<T> = { readonly parse: (value: unknown) => T }
@@ -35,11 +36,11 @@ export function fetchDashboard(): Promise<DashboardSnapshot> {
 
 export function extractTab(
   tabId: number,
-  sourceType: SourceType,
-): Promise<readonly LeadRecord[]> {
-  return request("/api/extract", LeadRecordsSchema, {
+  sourceType: RequestedSource,
+): Promise<ResearchResult> {
+  return request("/api/extract", ResearchResultSchema, {
     method: "POST",
-    body: JSON.stringify({ tabId, sourceType }),
+    body: JSON.stringify({ tabId, sourceType, limit: 5 }),
   })
 }
 

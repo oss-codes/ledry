@@ -8,7 +8,7 @@
   --sidepanel-text: #0f172a;
   --sidepanel-muted: #64748b;
   --sidepanel-border: #e2e8f0;
-  --sidepanel-border-strong: #94a3b8;
+  --sidepanel-border-strong: #64748b;
   --sidepanel-hover: #f1f5f9;
   --sidepanel-accent: #0284c7;
   --sidepanel-accent-strong: #0369a1;
@@ -56,6 +56,7 @@ body {
 }
 
 button,
+input,
 textarea {
   font: inherit;
 }
@@ -69,6 +70,7 @@ button {
 }
 
 button:focus-visible,
+input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--sidepanel-accent-strong);
   outline-offset: 2px;
@@ -137,5 +139,9 @@ textarea:focus-visible {
   *::after {
     scroll-behavior: auto;
     transition-duration: 0.01ms;
+  }
+
+  .send-button[data-busy="true"] svg {
+    animation: none;
   }
 }

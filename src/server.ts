@@ -2,12 +2,21 @@ import { z } from "zod"
 import { BridgeUnavailableError, BrowserBridge } from "./bridge"
 import type { AppConfig } from "./config"
 import { handleDashboardRequest } from "./dashboard"
-import { ExtensionMessageSchema, QualificationStatusSchema } from "./schemas"
+import { prepareResearchResults } from "./research"
+import {
+  ExtensionMessageSchema,
+  QualificationStatusSchema,
+  RequestedSourceSchema,
+} from "./schemas"
 import type { LeadStore } from "./store"
 
 const ExtractRequestSchema = z.object({
   tabId: z.number().int().nonnegative(),
-  sourceType: z.enum(["google-maps", "google-search", "website", "social"]),
+  sourceType: RequestedSourceSchema,
+})
+const ResearchRequestSchema = ExtractRequestSchema.extend({
+  brief: z.string().trim().max(2_000).default(""),
+  limit: z.number().int().min(1).max(25).default(5),
 })
 const QualificationRequestSchema = z.object({
   qualificationStatus: QualificationStatusSchema,
@@ -21,7 +30,7 @@ const ScrollRequestSchema = z.object({
   amount: z.number().int().min(100).max(3000),
 })
 
-type SocketState = { authenticated: boolean }
+type SocketState = { authenticated: boolean; origin: string }
 
 export type BridgeServer = {
   readonly port: number
@@ -67,7 +76,7 @@ export function startBridgeServer(
         if (origin === null || !origin.startsWith("chrome-extension://"))
           return json({ error: "Extension origin required" }, 403)
         const upgraded = bunServer.upgrade(request, {
-          data: { authenticated: false },
+          data: { authenticated: false, origin },
         })
         return upgraded
           ? undefined
@@ -90,8 +99,21 @@ export function startBridgeServer(
       if (request.method === "POST" && url.pathname === "/extract") {
         const input = ExtractRequestSchema.parse(await request.json())
         const leads = await bridge.extract(input.tabId, input.sourceType)
-        store.save(leads)
-        return json(leads)
+        const prepared = prepareResearchResults(leads, 25)
+        store.save(prepared.accepted)
+        return json(prepared.accepted)
+      }
+      if (request.method === "POST" && url.pathname === "/research") {
+        const input = ResearchRequestSchema.parse(await request.json())
+        const leads = await bridge.extract(input.tabId, input.sourceType)
+        const run = store.captureRun({
+          brief: input.brief,
+          leads,
+          limit: input.limit,
+          requestedSource: input.sourceType,
+          tabId: input.tabId,
+        })
+        return json({ run, records: store.listRecords(run.id) })
       }
       if (request.method === "POST" && url.pathname === "/navigate") {
         const input = NavigateRequestSchema.parse(await request.json())
@@ -106,6 +128,14 @@ export function startBridgeServer(
         return json(store.list())
       if (request.method === "GET" && url.pathname === "/records")
         return json(store.listRecords())
+      if (request.method === "GET" && url.pathname === "/runs")
+        return json(store.listRuns())
+      const runRecordsMatch = url.pathname.match(/^\/runs\/([^/]+)\/records$/)
+      if (request.method === "GET" && runRecordsMatch !== null) {
+        const idPart = runRecordsMatch[1]
+        if (idPart === undefined) return json({ error: "Not found" }, 404)
+        return json(store.listRecords(decodeURIComponent(idPart)))
+      }
       const recordMatch = url.pathname.match(
         /^\/records\/([^/]+)\/qualification$/,
       )
@@ -161,6 +191,10 @@ export function startBridgeServer(
         }
 
         if (message.type === "hello") {
+          if (socket.data.origin !== `chrome-extension://${message.clientId}`) {
+            socket.close(1008, "Extension identity mismatch")
+            return
+          }
           if (message.token !== config.token) {
             socket.close(1008, "Invalid pairing token")
             return
@@ -179,6 +213,37 @@ export function startBridgeServer(
         }
         if (!socket.data.authenticated) {
           socket.close(1008, "Authenticate first")
+          return
+        }
+        if (message.type === "capture") {
+          try {
+            const run = store.captureRun({
+              brief: message.brief,
+              leads: message.leads,
+              limit: message.limit,
+              requestId: message.requestId,
+              requestedSource: message.sourceType,
+              tabId: message.tabId,
+            })
+            socket.send(
+              JSON.stringify({
+                type: "capture_ack",
+                requestId: message.requestId,
+                ok: true,
+                run,
+              }),
+            )
+          } catch (error) {
+            socket.send(
+              JSON.stringify({
+                type: "capture_ack",
+                requestId: message.requestId,
+                ok: false,
+                error:
+                  error instanceof Error ? error.message : "Capture failed",
+              }),
+            )
+          }
           return
         }
         bridge.settle(socket, message)

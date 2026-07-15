@@ -59,17 +59,19 @@ const STATUSES = [
 }>
 
 export function StatusControl({
+  label,
   disabled = false,
   onChange,
   value,
 }: {
+  readonly label: string
   readonly disabled?: boolean
   readonly onChange: (status: QualificationStatus) => void
   readonly value: QualificationStatus
 }) {
   return (
     <fieldset className="status-control" aria-busy={disabled}>
-      <legend className="visually-hidden">Qualification</legend>
+      <legend className="visually-hidden">{label}</legend>
       {STATUSES.map((status) => (
         <button
           aria-pressed={value === status.value}

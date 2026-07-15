@@ -13,6 +13,7 @@ export type BusyOperation =
   | "save"
   | "dashboard"
   | "settings"
+  | "capture"
   | null
 
 export function createSidepanelView() {
@@ -40,9 +41,21 @@ export function createSidepanelView() {
   const brief = element("#research-brief", HTMLTextAreaElement)
   const save = element("#save-brief", HTMLButtonElement)
   const toast = element("#toast", HTMLDivElement)
+  const captureControls = element("#capture-controls", HTMLElement)
+  const capture = element("#start-capture", HTMLButtonElement)
+  const limit = element("#lead-limit", HTMLInputElement)
+  const runResult = element("#run-result", HTMLElement)
+  const runTitle = element("#run-result-title", HTMLHeadingElement)
+  const runStatus = element("#run-status", HTMLSpanElement)
+  const runSaved = element("#run-saved", HTMLElement)
+  const runDiscovered = element("#run-discovered", HTMLElement)
+  const runQuarantined = element("#run-quarantined", HTMLElement)
+  const runSkipped = element("#run-skipped", HTMLElement)
+  const runWarning = element("#run-warning", HTMLParagraphElement)
   let busyOperation: BusyOperation = null
   let canApprove = false
   let canSave = false
+  let canCapture = false
   let approvalText = "Approve this tab"
   let toastTimer: number | undefined
 
@@ -94,6 +107,11 @@ export function createSidepanelView() {
         : "Save research brief",
     )
     form.setAttribute("aria-busy", String(busyOperation === "save"))
+    capture.disabled = busyOperation !== null || !canCapture
+    capture.textContent =
+      busyOperation === "capture" ? "Capturing…" : "Start capture"
+    capture.setAttribute("aria-busy", String(busyOperation === "capture"))
+    limit.disabled = busyOperation !== null || !canCapture
   }
 
   function render(status: SidepanelStatus): void {
@@ -121,6 +139,25 @@ export function createSidepanelView() {
     workspace.dataset["hasBrief"] = String(hasBrief)
     briefThread.hidden = !hasBrief
     briefSummary.textContent = status.currentBrief
+    canCapture =
+      status.bridgeConnected && status.tab?.state === "approved" && hasBrief
+    captureControls.hidden = status.tab?.state !== "approved"
+    runResult.hidden = status.lastRun === null
+    if (status.lastRun !== null) {
+      runTitle.textContent =
+        status.lastRun.status === "completed"
+          ? "Capture complete"
+          : "No safe leads found"
+      runStatus.textContent =
+        status.lastRun.status === "completed" ? "Complete" : "Empty"
+      runStatus.dataset["state"] = status.lastRun.status
+      runSaved.textContent = String(status.lastRun.saved)
+      runDiscovered.textContent = String(status.lastRun.discovered)
+      runQuarantined.textContent = String(status.lastRun.quarantined)
+      runSkipped.textContent = String(status.lastRun.skipped)
+      runWarning.textContent = status.lastRun.warnings.join(" · ")
+      runWarning.hidden = status.lastRun.warnings.length === 0
+    }
     updateActivity(
       bridgeStep,
       bridgeLabel,
@@ -151,7 +188,11 @@ export function createSidepanelView() {
       researchStep,
       researchLabel,
       presentation.researchActivity,
-      presentation.researchActivity === "active" ? "Ready" : "Waiting",
+      presentation.researchActivity === "complete"
+        ? "Complete"
+        : presentation.researchActivity === "active"
+          ? "Ready"
+          : "Waiting",
       "Lead capture",
     )
     canApprove = presentation.canApprove
@@ -189,6 +230,7 @@ export function createSidepanelView() {
   return {
     approval,
     brief,
+    capture,
     configure,
     dashboard,
     focusWorkspaceTitle,
@@ -198,5 +240,6 @@ export function createSidepanelView() {
     render,
     setBusy,
     settings,
+    limit,
   }
 }

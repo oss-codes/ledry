@@ -8,6 +8,11 @@ import {
   LeadSchema,
   type QualificationStatus,
   QualificationStatusSchema,
+  type RequestedSource,
+  type ResearchResult,
+  ResearchResultSchema,
+  type ResearchRun,
+  ResearchRunSchema,
   type Tab,
   TabSchema,
 } from "./schemas"
@@ -37,7 +42,7 @@ export class DaemonClient {
 
   async extract(
     tabId: number,
-    sourceType: "google-maps" | "google-search" | "website" | "social",
+    sourceType: RequestedSource,
   ): Promise<readonly Lead[]> {
     const response = await this.#request("/extract", true, {
       method: "POST",
@@ -45,6 +50,34 @@ export class DaemonClient {
       body: JSON.stringify({ tabId, sourceType }),
     })
     return LeadSchema.array().parse(await response.json())
+  }
+
+  async research(input: {
+    readonly brief: string
+    readonly limit: number
+    readonly sourceType: RequestedSource
+    readonly tabId: number
+  }): Promise<ResearchResult> {
+    const response = await this.#request("/research", true, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    return ResearchResultSchema.parse(await response.json())
+  }
+
+  async runs(): Promise<readonly ResearchRun[]> {
+    return ResearchRunSchema.array().parse(
+      await this.#request("/runs", true).then((response) => response.json()),
+    )
+  }
+
+  async runRecords(id: string): Promise<readonly LeadRecord[]> {
+    return LeadRecordSchema.array().parse(
+      await this.#request(`/runs/${encodeURIComponent(id)}/records`, true).then(
+        (response) => response.json(),
+      ),
+    )
   }
 
   async navigate(tabId: number, url: string): Promise<Tab> {

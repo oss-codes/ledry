@@ -1,3 +1,5 @@
+import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import { dirname, resolve } from "node:path"
 import type { Lead, LeadRecord } from "./schemas"
 
 function csvCell(value: string): string {
@@ -104,4 +106,30 @@ export function serializeLeadRecords(
       .join(","),
   )
   return `${header.join(",")}\n${rows.join("\n")}\n`
+}
+
+export async function writeVerifiedExport(
+  requestedPath: string,
+  output: string,
+  records: number,
+): Promise<{
+  readonly bytes: number
+  readonly path: string
+  readonly records: number
+}> {
+  const path = resolve(requestedPath)
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 })
+  const temporaryPath = `${path}.${crypto.randomUUID()}.tmp`
+  try {
+    await writeFile(temporaryPath, output, { encoding: "utf8", mode: 0o600 })
+    await rename(temporaryPath, path)
+    await chmod(path, 0o600)
+    const verified = await readFile(path, "utf8")
+    if (verified !== output)
+      throw new Error(`Export verification failed for ${path}`)
+    return { bytes: Buffer.byteLength(verified), path, records }
+  } catch (error) {
+    await rm(temporaryPath, { force: true })
+    throw error
+  }
 }

@@ -1,3 +1,4 @@
+import { type ResearchRun, ResearchRunSchema } from "../src/schemas"
 import { approvedTabs, approveTab } from "./approved-tabs"
 import { isAllowedUrl } from "./policy"
 import {
@@ -22,7 +23,7 @@ export async function readExtensionConfig(): Promise<ExtensionConfig> {
 async function readStatus(bridgeConnected: boolean): Promise<SidepanelStatus> {
   const [config, values, tabs, approved] = await Promise.all([
     readExtensionConfig(),
-    chrome.storage.local.get(["currentBrief"]),
+    chrome.storage.local.get(["currentBrief", "lastRun"]),
     chrome.tabs.query({ active: true, currentWindow: true }),
     approvedTabs(),
   ])
@@ -30,12 +31,15 @@ async function readStatus(bridgeConnected: boolean): Promise<SidepanelStatus> {
   const rawBrief = values["currentBrief"]
   const currentBrief =
     typeof rawBrief === "string" ? rawBrief.slice(0, 2_000) : ""
+  const parsedLastRun = ResearchRunSchema.safeParse(values["lastRun"])
+  const lastRun = parsedLastRun.success ? parsedLastRun.data : null
 
   if (activeTab?.id === undefined || activeTab.url === undefined)
     return {
       bridgeConnected,
       configReady: config.token.length >= 16,
       currentBrief,
+      lastRun,
       tab: null,
     }
 
@@ -52,6 +56,7 @@ async function readStatus(bridgeConnected: boolean): Promise<SidepanelStatus> {
     bridgeConnected,
     configReady: config.token.length >= 16,
     currentBrief,
+    lastRun,
     tab: {
       id: activeTab.id,
       title: activeTab.title ?? "Untitled tab",
@@ -69,6 +74,11 @@ async function readStatus(bridgeConnected: boolean): Promise<SidepanelStatus> {
 async function handleRequest(
   request: SidepanelRequest,
   bridgeConnected: boolean,
+  capture: (
+    tabId: number,
+    limit: number,
+    brief: string,
+  ) => Promise<ResearchRun>,
 ): Promise<SidepanelStatus> {
   switch (request.type) {
     case "sidepanel.status":
@@ -95,6 +105,18 @@ async function handleRequest(
     case "sidepanel.brief.save":
       await chrome.storage.local.set({ currentBrief: request.brief })
       return await readStatus(bridgeConnected)
+    case "sidepanel.capture": {
+      const status = await readStatus(bridgeConnected)
+      if (status.tab?.state !== "approved" || status.tab.id !== request.tabId)
+        throw new Error("Approve the active tab before capturing leads")
+      const run = await capture(
+        request.tabId,
+        request.limit,
+        status.currentBrief,
+      )
+      await chrome.storage.local.set({ lastRun: run })
+      return await readStatus(bridgeConnected)
+    }
     default:
       return request satisfies never
   }
@@ -102,6 +124,11 @@ async function handleRequest(
 
 export function registerSidepanelMessages(
   bridgeConnected: () => boolean,
+  capture: (
+    tabId: number,
+    limit: number,
+    brief: string,
+  ) => Promise<ResearchRun>,
 ): void {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (
@@ -114,7 +141,7 @@ export function registerSidepanelMessages(
       sendResponse({ ok: false, error: "Invalid side panel request" })
       return false
     }
-    void handleRequest(request.data, bridgeConnected()).then(
+    void handleRequest(request.data, bridgeConnected(), capture).then(
       (status) => sendResponse({ ok: true, status }),
       (error: unknown) =>
         sendResponse({

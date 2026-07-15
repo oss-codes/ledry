@@ -1,3 +1,4 @@
+import { sanitizePublicUrl } from "../src/url-policy"
 import { isAllowedUrl } from "./policy"
 
 type ApprovedTab = { readonly id: number; readonly origin: string }
@@ -38,10 +39,31 @@ async function forgetApprovedTab(tabId: number): Promise<void> {
   await chrome.action.setBadgeText({ text: "", tabId })
 }
 
+async function requirePublicBusinessPage(tabId: number): Promise<void> {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["dist/content-script.js"],
+  })
+  const classification: unknown = await chrome.tabs.sendMessage(tabId, {
+    action: "classify",
+  })
+  if (
+    typeof classification !== "object" ||
+    classification === null ||
+    !("publicBusiness" in classification) ||
+    classification.publicBusiness !== true
+  )
+    throw new Error(
+      "This page does not expose explicit public business-page evidence",
+    )
+}
+
 export async function assertApprovedTab(tabId: number): Promise<void> {
   const tab = await chrome.tabs.get(tabId)
-  if (tab.url === undefined || !isAllowedUrl(tab.url))
+  if (tab.url === undefined || !isAllowedUrl(tab.url)) {
+    await forgetApprovedTab(tabId)
     throw new Error("This source is outside the project's scope")
+  }
   const origin = new URL(tab.url).origin
   if (
     !(await approvedTabs()).some(
@@ -49,21 +71,64 @@ export async function assertApprovedTab(tabId: number): Promise<void> {
     )
   )
     throw new Error("Approve this origin from the Ledry side panel first")
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ["dist/content-script.js"],
-  })
+  try {
+    await requirePublicBusinessPage(tabId)
+  } catch (error) {
+    await forgetApprovedTab(tabId)
+    throw error
+  }
 }
 
-export async function approveTab(tab: chrome.tabs.Tab): Promise<void> {
+export async function listApprovedTabs(): Promise<
+  readonly {
+    readonly id: number
+    readonly title: string
+    readonly url: string
+  }[]
+> {
+  const [tabs, approved] = await Promise.all([
+    chrome.tabs.query({}),
+    approvedTabs(),
+  ])
+  const results: { id: number; title: string; url: string }[] = []
+  for (const tab of tabs) {
+    if (tab.id === undefined || tab.url === undefined) continue
+    const origin = new URL(tab.url).origin
+    if (!approved.some((item) => item.id === tab.id && item.origin === origin))
+      continue
+    try {
+      await assertApprovedTab(tab.id)
+      const current = await chrome.tabs.get(tab.id)
+      if (
+        current.url === undefined ||
+        !isAllowedUrl(current.url) ||
+        new URL(current.url).origin !== origin
+      )
+        continue
+      results.push({
+        id: tab.id,
+        title: current.title ?? "Untitled",
+        url: sanitizePublicUrl(current.url),
+      })
+    } catch {}
+  }
+  return results
+}
+
+export async function approveTab(
+  tab: Pick<chrome.tabs.Tab, "id" | "url">,
+): Promise<void> {
   if (tab.id === undefined || tab.url === undefined || !isAllowedUrl(tab.url)) {
+    if (tab.id !== undefined) await forgetApprovedTab(tab.id)
     await chrome.action.setBadgeText({ text: "NO", tabId: tab.id })
     return
   }
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    files: ["dist/content-script.js"],
-  })
+  try {
+    await requirePublicBusinessPage(tab.id)
+  } catch (error) {
+    await chrome.action.setBadgeText({ text: "NO", tabId: tab.id })
+    throw error
+  }
   await rememberApprovedTab(tab.id, new URL(tab.url).origin)
   await chrome.action.setBadgeText({ text: "OK", tabId: tab.id })
   await chrome.action.setBadgeBackgroundColor({
@@ -101,10 +166,12 @@ export async function navigateApprovedTab(
       "Navigation left the approved origin; approve the destination tab before continuing",
     )
   }
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ["dist/content-script.js"],
-  })
+  try {
+    await requirePublicBusinessPage(tabId)
+  } catch (error) {
+    await forgetApprovedTab(tabId)
+    throw error
+  }
   return { id: tabId, title: tab.title ?? "Untitled", url: tab.url }
 }
 

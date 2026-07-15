@@ -2,10 +2,12 @@ import { type Command, Option } from "commander"
 import { z } from "zod"
 import { DaemonClient } from "./client"
 import { loadConfig } from "./config"
-import { SourceTypeSchema } from "./schemas"
+import { serializeLeadRecords, writeVerifiedExport } from "./export"
+import { RequestedSourceSchema, SourceTypeSchema } from "./schemas"
 
 const TabIdSchema = z.coerce.number().int().nonnegative()
 const ScrollAmountSchema = z.coerce.number().int().min(100).max(3000)
+const LeadLimitSchema = z.coerce.number().int().min(1).max(25)
 
 export function registerBrowserCommands(program: Command): void {
   program
@@ -51,19 +53,68 @@ export function registerBrowserCommands(program: Command): void {
     )
 
   program
+    .command("research")
+    .description("Run a capped, reported lead capture on an approved tab")
+    .requiredOption("--tab <id>", "Chrome tab ID")
+    .option("--brief <text>", "Research context", "")
+    .option("--limit <count>", "Maximum leads to persist", "5")
+    .addOption(
+      new Option("--source <type>", "Source adapter")
+        .choices(["auto", "google-maps", "google-search", "website", "social"])
+        .default("auto"),
+    )
+    .addOption(
+      new Option("--format <type>", "Export format")
+        .choices(["csv", "json", "jsonl"])
+        .default("csv"),
+    )
+    .option("--out <path>", "Write this run's records to a verified file")
+    .action(
+      async (options: {
+        readonly brief: string
+        readonly format: "csv" | "json" | "jsonl"
+        readonly limit: string
+        readonly out?: string
+        readonly source: string
+        readonly tab: string
+      }) => {
+        const client = new DaemonClient(await loadConfig())
+        const result = await client.research({
+          brief: options.brief,
+          limit: LeadLimitSchema.parse(options.limit),
+          sourceType: RequestedSourceSchema.parse(options.source),
+          tabId: TabIdSchema.parse(options.tab),
+        })
+        const exported =
+          options.out === undefined
+            ? undefined
+            : await writeVerifiedExport(
+                options.out,
+                serializeLeadRecords(result.records, options.format),
+                result.records.length,
+              )
+        process.stdout.write(
+          `${JSON.stringify({ run: result.run, export: exported }, null, 2)}\n`,
+        )
+      },
+    )
+
+  program
     .command("scrape")
     .description("Extract leads from an approved browser tab")
     .requiredOption("--tab <id>", "Chrome tab ID")
     .addOption(
       new Option("--source <type>", "Source adapter")
-        .choices(["google-maps", "google-search", "website", "social"])
-        .default("website"),
+        .choices(["auto", "google-maps", "google-search", "website", "social"])
+        .default("auto"),
     )
     .action(
       async (options: { readonly tab: string; readonly source: string }) => {
         const leads = await new DaemonClient(await loadConfig()).extract(
           TabIdSchema.parse(options.tab),
-          SourceTypeSchema.parse(options.source),
+          options.source === "auto"
+            ? RequestedSourceSchema.parse(options.source)
+            : SourceTypeSchema.parse(options.source),
         )
         process.stdout.write(
           `${JSON.stringify({ saved: leads.length, leads }, null, 2)}\n`,

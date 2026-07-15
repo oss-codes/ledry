@@ -20,6 +20,7 @@ function status(
     bridgeConnected: true,
     configReady: true,
     currentBrief: "",
+    lastRun: null,
     tab:
       state === null
         ? null
@@ -95,6 +96,39 @@ describe("side panel DOM view", () => {
     expect(
       document.querySelector("#brief-thread")?.hasAttribute("hidden"),
     ).toBeFalse()
+    expect(view.capture.disabled).toBeFalse()
+  })
+
+  test("renders the latest durable run report", () => {
+    const view = createSidepanelView()
+    view.render(
+      status("approved", {
+        currentBrief: "Find five coffee roasters",
+        lastRun: {
+          id: "run:test",
+          brief: "Find five coffee roasters",
+          tabId: 42,
+          requestedSource: "auto",
+          actualSources: ["google-maps"],
+          limit: 5,
+          discovered: 7,
+          saved: 5,
+          quarantined: 1,
+          skipped: 1,
+          status: "completed",
+          warnings: ["1 unsafe candidate(s) quarantined"],
+          startedAt: "2026-07-15T00:00:00.000Z",
+          completedAt: "2026-07-15T00:00:01.000Z",
+          recordIds: [],
+        },
+      }),
+    )
+
+    expect(
+      document.querySelector("#run-result")?.hasAttribute("hidden"),
+    ).toBeFalse()
+    expect(document.querySelector("#run-saved")?.textContent).toBe("5")
+    expect(document.querySelector("#run-quarantined")?.textContent).toBe("1")
   })
 
   test("announces approval progress and preserves focus on completion", () => {

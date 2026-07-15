@@ -6,7 +6,7 @@ import {
 } from "./sidepanel-messages"
 import { requestOriginPermission } from "./sidepanel-permissions"
 export interface SidepanelTransport {
-  approveTab(tabId: number, origin: string): Promise<SidepanelStatus>
+  approveTab(tabId: number, url: string): Promise<SidepanelStatus>
   request(request: SidepanelRequest): Promise<SidepanelStatus>
 }
 
@@ -15,12 +15,12 @@ class SidepanelTransportError extends Error {
 }
 
 class RuntimeTransport implements SidepanelTransport {
-  async approveTab(tabId: number, origin: string): Promise<SidepanelStatus> {
-    await requestOriginPermission(origin)
+  async approveTab(tabId: number, url: string): Promise<SidepanelStatus> {
+    await requestOriginPermission(url)
     return await this.request({
       type: "sidepanel.tab.approve",
       tabId,
-      origin,
+      origin: new URL(url).origin,
     })
   }
 
@@ -42,6 +42,7 @@ class PreviewTransport implements SidepanelTransport {
       bridgeConnected: state !== "offline" && state !== "configuring",
       configReady: state !== "configuring",
       currentBrief: "",
+      lastRun: null,
       tab:
         state === "empty" || state === "configuring"
           ? null
@@ -55,11 +56,11 @@ class PreviewTransport implements SidepanelTransport {
     }
   }
 
-  async approveTab(tabId: number, origin: string): Promise<SidepanelStatus> {
+  async approveTab(tabId: number, _url: string): Promise<SidepanelStatus> {
     return await this.request({
       type: "sidepanel.tab.approve",
       tabId,
-      origin,
+      origin: this.#status.tab?.origin ?? "",
     })
   }
 
@@ -76,6 +77,28 @@ class PreviewTransport implements SidepanelTransport {
         this.#status = {
           ...this.#status,
           currentBrief: request.brief,
+        }
+        return this.#status
+      case "sidepanel.capture":
+        this.#status = {
+          ...this.#status,
+          lastRun: {
+            id: "run:preview",
+            brief: this.#status.currentBrief,
+            tabId: request.tabId,
+            requestedSource: "auto",
+            actualSources: ["google-maps"],
+            limit: request.limit,
+            discovered: 7,
+            saved: Math.min(5, request.limit),
+            quarantined: 1,
+            skipped: Math.max(0, 6 - request.limit),
+            status: "completed",
+            warnings: ["1 unsafe candidate(s) quarantined"],
+            startedAt: "2026-07-15T00:00:00.000Z",
+            completedAt: "2026-07-15T00:00:01.000Z",
+            recordIds: [],
+          },
         }
         return this.#status
       case "sidepanel.status":

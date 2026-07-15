@@ -1,8 +1,8 @@
 # Ledry
 
-An open-source, local-first lead research agent. It connects an OpenTUI terminal application to a small Chrome extension so AI agents can research Google Maps and public websites through the browser session you already control.
+An open-source, local-first lead research agent. It connects an OpenTUI terminal application to a small Chrome extension so AI agents can research Google Maps, Google Search, public business websites, Instagram, and LinkedIn organization pages through the browser session you already control.
 
-The project deliberately does not support LinkedIn, CAPTCHA bypass, proxy rotation, private data collection, or automated outreach.
+The project deliberately does not support personal profiles, private or account-scoped pages, CAPTCHA bypass, proxy rotation, private data collection, or automated outreach.
 
 ## Why this exists
 
@@ -14,7 +14,9 @@ Most lead scrapers are closed dashboards or single-site CSV exporters. Ledry mak
 - Manifest V3 Chrome extension with visible connection badge
 - Google Maps business extraction
 - Google Search result extraction
-- Public website email, phone, and social-link extraction
+- Public website email/phone extraction and verified LinkedIn organization links
+- Dynamic source detection with specialized Google and public-social adapters
+- Durable research run reports with immutable record snapshots and verified exports
 - SQLite persistence and stable source-URL upserts
 - OpenTUI dashboard for tabs and captured leads
 - Responsive localhost dashboard for source selection, review, evidence, and qualification
@@ -61,12 +63,15 @@ ledry navigate --tab 123 --url "https://www.google.com/search?q=coffee+roasters+
 ledry scroll --tab 123 --amount 1200
 ledry scrape --tab 123 --source google-maps
 ledry scrape --tab 123 --source google-search
+ledry research --tab 123 --source auto --limit 5 --brief "Coffee roasters in Pune" --out pune-coffee.csv
+ledry report --run latest
+ledry export --run latest --format csv --out verified-leads.csv
 ledry leads --format csv --out leads.csv
 ledry records --format json
 ledry qualify --id lead_123 --status qualified
 ```
 
-Navigation stays within the tab's user-approved origin. Open and approve a tab again before an agent works on a different origin. LinkedIn is always blocked.
+Navigation stays within the tab's user-approved origin. Open and approve a tab again before an agent works on a different origin. LinkedIn is limited to public company and school pages; profiles, feeds, messages, account pages, analytics, and settings remain blocked. Generic websites and social pages are persisted only when the page exposes explicit organization or business-page evidence; ambiguous personal pages fail closed.
 
 An agent workflow is intentionally shell-based and vendor-neutral: start the dashboard daemon, reuse a user-approved tab for visible navigation and scrolling, scrape within the user's scope, inspect `records`, and apply only user-provided qualification criteria with `qualify`. Claude Code, Codex, OpenCode, Hermes, and other agents that can follow an Agent Skill and invoke local commands use the same contract. Pairing remains user-only because it prints the local secret.
 
@@ -87,8 +92,9 @@ The format and install locations are documented by [Claude Code](https://code.cl
 - The dashboard uses an HttpOnly same-site session cookie; state-changing browser requests must be same-origin.
 - Extension connections require a generated local token.
 - Browser session cookies are never sent to the CLI.
-- Chrome permissions are limited to the side panel, tabs, scripting, storage, and per-origin HTTP(S) access granted when the user approves a tab.
-- The extension rejects LinkedIn tabs.
+- Chrome permissions are limited to active-tab access, the side panel, scripting, storage, and per-origin HTTP(S) access granted when the user approves a tab.
+- The extension rejects personal/private social routes and only permits public LinkedIn organization pages.
+- Unsafe candidates are counted with a reason and source type, but their names and contact details are not retained in quarantine.
 - Lead fields retain source URLs and field-level evidence.
 
 The extension can read approved pages. Review the source before installing it, keep the pairing token private, and stop the daemon when not in use. See [SECURITY.md](SECURITY.md) for reports.

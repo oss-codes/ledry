@@ -1,17 +1,25 @@
+import {
+  canonicalHostname,
+  isAllowedPublicSourceUrl,
+  isPublicGoogleSurfaceHost,
+} from "../src/url-policy"
+
 export function isAllowedUrl(rawUrl: string): boolean {
-  try {
-    const url = new URL(rawUrl)
-    return (
-      (url.protocol === "http:" || url.protocol === "https:") &&
-      url.hostname !== "linkedin.com" &&
-      !url.hostname.endsWith(".linkedin.com")
-    )
-  } catch {
-    return false
-  }
+  return isAllowedPublicSourceUrl(rawUrl)
 }
 
 export function permissionPatternForUrl(rawUrl: string): string | null {
-  if (!isAllowedUrl(rawUrl)) return null
-  return `${new URL(rawUrl).origin}/*`
+  try {
+    const url = new URL(rawUrl)
+    if (!isAllowedUrl(rawUrl)) {
+      if (
+        url.pathname !== "/" ||
+        !isPublicGoogleSurfaceHost(canonicalHostname(url))
+      )
+        return null
+    }
+    return `${url.origin}/*`
+  } catch {
+    return null
+  }
 }

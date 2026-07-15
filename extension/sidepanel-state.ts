@@ -61,7 +61,7 @@ export function presentStatus(status: SidepanelStatus): SidepanelPresentation {
       return {
         title: "This page is outside Ledry's scope",
         description:
-          "Use a public HTTP or HTTPS source. LinkedIn and privileged browser pages stay blocked.",
+          "Use a public business page. Personal profiles, account pages, messages, and privileged browser pages stay blocked.",
         approvalLabel: "Unavailable",
         canApprove: false,
         bridgeActivity: "complete",
@@ -81,14 +81,14 @@ export function presentStatus(status: SidepanelStatus): SidepanelPresentation {
       }
     case "approved":
       return {
-        title: "Ready to research",
+        title: status.lastRun === null ? "Ready to research" : "Research saved",
         description:
           "Your connected agent can now navigate, scroll, and capture leads from this approved origin.",
         approvalLabel: "Approved",
         canApprove: false,
         bridgeActivity: "complete",
         approvalActivity: "complete",
-        researchActivity: "active",
+        researchActivity: status.lastRun === null ? "active" : "complete",
       }
     default:
       return status.tab.state satisfies never

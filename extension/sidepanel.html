@@ -65,6 +65,31 @@
             </article>
           </div>
 
+          <section id="capture-controls" class="capture-controls" hidden aria-labelledby="capture-title">
+            <div>
+              <p class="eyebrow">Dynamic adapter</p>
+              <h2 id="capture-title">Capture this page</h2>
+              <p>Ledry detects Maps, Search, Instagram, LinkedIn company pages, or a public business website.</p>
+            </div>
+            <label for="lead-limit">Lead limit</label>
+            <input id="lead-limit" type="number" min="1" max="25" value="5" inputmode="numeric" />
+            <button id="start-capture" class="button button-primary" type="button">Start capture</button>
+          </section>
+
+          <section id="run-result" class="run-result" hidden aria-labelledby="run-result-title">
+            <div class="run-result-heading">
+              <div><p class="eyebrow">Latest run</p><h2 id="run-result-title">Capture complete</h2></div>
+              <span id="run-status" class="approval-badge">Complete</span>
+            </div>
+            <dl>
+              <div><dt>Saved</dt><dd id="run-saved">0</dd></div>
+              <div><dt>Discovered</dt><dd id="run-discovered">0</dd></div>
+              <div><dt>Quarantined</dt><dd id="run-quarantined">0</dd></div>
+              <div><dt>Skipped</dt><dd id="run-skipped">0</dd></div>
+            </dl>
+            <p id="run-warning" class="run-warning"></p>
+          </section>
+
           <ol class="activity-list" aria-label="Research readiness" aria-live="polite">
             <li id="activity-bridge" class="activity-step" data-state="pending">
               <span class="activity-marker" aria-hidden="true"></span>
@@ -84,7 +109,7 @@
               <span class="activity-marker" aria-hidden="true"></span>
               <span class="activity-copy">
                 <span class="activity-heading"><strong>Lead capture</strong><span id="activity-research-label" class="activity-status">Waiting</span></span>
-                <small>Connected agents can extract and qualify evidence.</small>
+                <small>The panel and every supported AI agent use the same durable run.</small>
               </span>
             </li>
           </ol>

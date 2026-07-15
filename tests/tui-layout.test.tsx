@@ -53,12 +53,29 @@ class FakeDashboardClient implements DashboardClient {
     return tabs
   }
 
-  async extract(
-    tabId: number,
-    source: Parameters<DashboardClient["extract"]>[1],
-  ) {
+  async research(input: Parameters<DashboardClient["research"]>[0]) {
+    const { sourceType: source, tabId } = input
     this.extractions.push({ tabId, source })
-    return [lead]
+    return {
+      run: {
+        id: "run:tui",
+        brief: input.brief,
+        tabId,
+        requestedSource: source,
+        actualSources: [source],
+        limit: input.limit,
+        discovered: 1,
+        saved: 1,
+        quarantined: 0,
+        skipped: 0,
+        status: "completed" as const,
+        warnings: [],
+        startedAt: "2026-07-15T00:00:00.000Z",
+        completedAt: "2026-07-15T00:00:01.000Z",
+        recordIds: [lead.id],
+      },
+      records: [record],
+    }
   }
 
   async records() {
@@ -207,7 +224,7 @@ describe("OpenTUI dashboard", () => {
         await Bun.sleep(0)
       })
       await renderOnce()
-      expect(captureCharFrame()).toContain("Saved 1 lead.")
+      expect(captureCharFrame()).toContain("1 saved, 0 quarantined, 0 skipped")
       expect(client.extractions).toEqual([{ tabId: 2, source: "social" }])
     } finally {
       act(() => renderer.destroy())
@@ -222,6 +239,9 @@ describe("OpenTUI dashboard", () => {
       "google-search",
     )
     expect(sourceTypeForUrl("https://business.facebook.com/acme")).toBe(
+      "social",
+    )
+    expect(sourceTypeForUrl("https://www.linkedin.com/company/acme")).toBe(
       "social",
     )
     expect(sourceTypeForUrl("https://acme.example/about")).toBe("website")

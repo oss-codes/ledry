@@ -45,6 +45,32 @@ const LeadSchema = object({
   tags: array(string()),
 })
 
+const ResearchRunSchema = object({
+  id: string(),
+  brief: string(),
+  tabId: number(),
+  requestedSource: enumSchema([
+    "auto",
+    "google-maps",
+    "google-search",
+    "website",
+    "social",
+  ]),
+  actualSources: array(
+    enumSchema(["google-maps", "google-search", "website", "social"]),
+  ),
+  limit: number(),
+  discovered: number(),
+  saved: number(),
+  quarantined: number(),
+  skipped: number(),
+  status: enumSchema(["completed", "empty"]),
+  warnings: array(string()),
+  startedAt: string(),
+  completedAt: string(),
+  recordIds: array(string()),
+})
+
 export const LeadRecordSchema = object({
   lead: LeadSchema,
   qualificationStatus: QualificationStatusSchema,
@@ -58,6 +84,12 @@ export const DashboardSnapshotSchema = object({
     version: string(),
   }),
   tabs: array(object({ id: number(), title: string(), url: string() })),
+  records: LeadRecordsSchema,
+  runs: array(ResearchRunSchema),
+})
+
+export const ResearchResultSchema = object({
+  run: ResearchRunSchema,
   records: LeadRecordsSchema,
 })
 

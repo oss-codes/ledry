@@ -45,6 +45,57 @@
   margin-bottom: var(--space-4);
 }
 
+.run-report {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: var(--space-3) var(--space-6);
+  align-items: center;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border: 1px solid
+    color-mix(in srgb, var(--accent-primary) 45%, var(--border-default));
+  border-radius: var(--radius-panel);
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel)),
+    var(--surface-panel)
+  );
+}
+
+.run-report > div,
+.run-report dl div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.run-report span,
+.run-report dt,
+.run-report small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.run-report strong {
+  color: var(--text-primary);
+}
+
+.run-report dl {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.run-report dd {
+  margin: 0;
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.run-report small {
+  grid-column: 1 / -1;
+}
+
 .metric {
   display: flex;
   min-height: 72px;
@@ -315,7 +366,19 @@
 .detail-field dd.detail-value-machine {
   max-width: 100%;
   overflow-wrap: anywhere;
-  word-break: break-all;
+  word-break: normal;
+}
+
+@media (max-width: 360px) {
+  .detail-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .status-choice {
+    padding-inline: var(--space-2);
+    white-space: nowrap;
+  }
 }
 .evidence {
   margin-top: var(--space-5);
@@ -418,6 +481,12 @@
   .showcase-grid {
     grid-template-columns: 1fr;
   }
+  .run-report {
+    grid-template-columns: 1fr;
+  }
+  .run-report dl {
+    grid-template-columns: repeat(4, 1fr);
+  }
   .source-panel,
   .lead-list-panel,
   .detail-panel {
@@ -455,5 +524,8 @@
   .lead-meta {
     width: 100%;
     justify-content: space-between;
+  }
+  .run-report dl {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

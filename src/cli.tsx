@@ -5,7 +5,12 @@ import { Command, Option } from "commander"
 import { registerBrowserCommands } from "./browser-cli"
 import { DaemonClient } from "./client"
 import { loadConfig } from "./config"
-import { serializeLeadRecords, serializeLeads } from "./export"
+import {
+  serializeLeadRecords,
+  serializeLeads,
+  writeVerifiedExport,
+} from "./export"
+import type { LeadRecord, ResearchRun } from "./schemas"
 import { QualificationStatusSchema } from "./schemas"
 import { startBridgeServer } from "./server"
 import { LeadStore } from "./store"
@@ -39,6 +44,47 @@ function openDashboard(url: string): void {
         ? ["cmd", "/c", "start", "", url]
         : ["xdg-open", url]
   Bun.spawn(command, { stderr: "ignore", stdout: "ignore" }).unref()
+}
+
+function findRun(runs: readonly ResearchRun[], requested: string): ResearchRun {
+  const run =
+    requested === "latest"
+      ? runs[0]
+      : runs.find((item) => item.id === requested)
+  if (run === undefined) throw new Error(`Research run not found: ${requested}`)
+  return run
+}
+
+function qualificationCounts(records: readonly LeadRecord[]) {
+  return {
+    found: records.filter((record) => record.qualificationStatus === "found")
+      .length,
+    qualified: records.filter(
+      (record) => record.qualificationStatus === "qualified",
+    ).length,
+    notQualified: records.filter(
+      (record) => record.qualificationStatus === "not-qualified",
+    ).length,
+  }
+}
+
+function formatRun(
+  run: ResearchRun,
+  qualifications: ReturnType<typeof qualificationCounts>,
+): string {
+  const sources =
+    run.actualSources.length === 0 ? "none" : run.actualSources.join(", ")
+  return [
+    `Run: ${run.id}`,
+    `Status: ${run.status}`,
+    `Sources: ${sources}`,
+    `Saved: ${run.saved}/${run.limit}`,
+    `Discovered: ${run.discovered}`,
+    `Quarantined: ${run.quarantined}`,
+    `Skipped by limit: ${run.skipped}`,
+    `Qualifications: ${qualifications.qualified} qualified, ${qualifications.notQualified} not qualified, ${qualifications.found} found`,
+    ...run.warnings.map((warning) => `Warning: ${warning}`),
+  ].join("\n")
 }
 
 async function waitForShutdown(): Promise<void> {
@@ -111,12 +157,13 @@ program
       readonly format: "csv" | "json" | "jsonl"
       readonly out?: string
     }) => {
-      const output = serializeLeads(
-        await new DaemonClient(await loadConfig()).leads(),
-        options.format,
-      )
+      const leads = await new DaemonClient(await loadConfig()).leads()
+      const output = serializeLeads(leads, options.format)
       if (options.out === undefined) process.stdout.write(output)
-      else await Bun.write(options.out, output)
+      else
+        process.stdout.write(
+          `${JSON.stringify(await writeVerifiedExport(options.out, output, leads.length), null, 2)}\n`,
+        )
     },
   )
 
@@ -134,12 +181,71 @@ program
       readonly format: "csv" | "json" | "jsonl"
       readonly out?: string
     }) => {
-      const output = serializeLeadRecords(
-        await new DaemonClient(await loadConfig()).records(),
-        options.format,
-      )
+      const records = await new DaemonClient(await loadConfig()).records()
+      const output = serializeLeadRecords(records, options.format)
       if (options.out === undefined) process.stdout.write(output)
-      else await Bun.write(options.out, output)
+      else
+        process.stdout.write(
+          `${JSON.stringify(await writeVerifiedExport(options.out, output, records.length), null, 2)}\n`,
+        )
+    },
+  )
+
+program
+  .command("runs")
+  .description("List durable research run reports")
+  .action(async () => {
+    const runs = await new DaemonClient(await loadConfig()).runs()
+    process.stdout.write(`${JSON.stringify(runs, null, 2)}\n`)
+  })
+
+program
+  .command("report")
+  .description("Show a durable research run report")
+  .option("--run <id>", "Run ID or latest", "latest")
+  .option("--json", "Output JSON")
+  .action(
+    async (options: { readonly json?: boolean; readonly run: string }) => {
+      const client = new DaemonClient(await loadConfig())
+      const run = findRun(await client.runs(), options.run)
+      const qualifications = qualificationCounts(
+        await client.runRecords(run.id),
+      )
+      process.stdout.write(
+        options.json
+          ? `${JSON.stringify({ ...run, qualifications }, null, 2)}\n`
+          : `${formatRun(run, qualifications)}\n`,
+      )
+    },
+  )
+
+program
+  .command("export")
+  .description("Export records from one verified research run")
+  .option("--run <id>", "Run ID or latest", "latest")
+  .addOption(
+    new Option("--format <type>", "Output format")
+      .choices(["csv", "json", "jsonl"])
+      .default("csv"),
+  )
+  .requiredOption("--out <path>", "Output file path")
+  .action(
+    async (options: {
+      readonly format: "csv" | "json" | "jsonl"
+      readonly out: string
+      readonly run: string
+    }) => {
+      const client = new DaemonClient(await loadConfig())
+      const run = findRun(await client.runs(), options.run)
+      const records = await client.runRecords(run.id)
+      const exported = await writeVerifiedExport(
+        options.out,
+        serializeLeadRecords(records, options.format),
+        records.length,
+      )
+      process.stdout.write(
+        `${JSON.stringify({ runId: run.id, ...exported }, null, 2)}\n`,
+      )
     },
   )
 

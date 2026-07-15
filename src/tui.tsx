@@ -9,7 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 import { DaemonClient, type Health } from "./client"
 import type { AppConfig } from "./config"
-import type { Lead, LeadRecord, Tab } from "./schemas"
+import type { LeadRecord, ResearchResult, Tab } from "./schemas"
 import type { BridgeServer } from "./server"
 import { type DashboardLayout, DashboardView } from "./tui-view"
 
@@ -20,6 +20,7 @@ const SOCIAL_HOSTS = [
   "tiktok.com",
   "x.com",
   "youtube.com",
+  "linkedin.com",
 ] as const
 const GOOGLE_SUFFIX = /^(?:com|cat|[a-z]{2}|(?:co|com)\.[a-z]{2})$/
 
@@ -28,7 +29,12 @@ type SourceType = "google-maps" | "google-search" | "social" | "website"
 export interface DashboardClient {
   health(): Promise<Health>
   tabs(): Promise<readonly Tab[]>
-  extract(tabId: number, sourceType: SourceType): Promise<readonly Lead[]>
+  research(input: {
+    readonly brief: string
+    readonly limit: number
+    readonly sourceType: SourceType
+    readonly tabId: number
+  }): Promise<ResearchResult>
   records(): Promise<readonly LeadRecord[]>
 }
 
@@ -147,10 +153,15 @@ export function Dashboard({ client }: DashboardProps) {
       setExtracting(true)
       setMessage(`Extracting ${tab.title}…`)
       void client
-        .extract(tab.id, sourceTypeForUrl(tab.url))
-        .then((extracted) => {
+        .research({
+          brief: "Interactive OpenTUI capture",
+          limit: 5,
+          sourceType: sourceTypeForUrl(tab.url),
+          tabId: tab.id,
+        })
+        .then((result) => {
           setMessage(
-            `Saved ${extracted.length} lead${extracted.length === 1 ? "" : "s"}.`,
+            `Run ${result.run.status}: ${result.run.saved} saved, ${result.run.quarantined} quarantined, ${result.run.skipped} skipped.`,
           )
           return refresh(false)
         })

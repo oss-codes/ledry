@@ -17,7 +17,7 @@ Design read: operational dashboard for nontechnical operators and agent-assisted
 | Text primary | `--text-primary` | `#f8fafc` | Lead names, headings, key values |
 | Text secondary | `--text-secondary` | `#cbd5e1` | Body text and table content |
 | Text muted | `--text-muted` | `#94a3b8` | Metadata and placeholders |
-| Border | `--border-default` | `#334155` | Panel and control boundaries |
+| Border | `--border-default` | `#64748b` | Panel and control boundaries |
 | Border subtle | `--border-subtle` | `#1e293b` | Row separators |
 | Accent | `--accent-primary` | `#38bdf8` | Focus, primary action, live selection |
 | Accent text | `--accent-text` | `#7dd3fc` | Brand and highlighted labels |
@@ -30,7 +30,7 @@ Design read: operational dashboard for nontechnical operators and agent-assisted
 | Side-panel text | `--sidepanel-text` | `#0f172a` | Side-panel headings and body copy |
 | Side-panel muted | `--sidepanel-muted` | `#64748b` | Side-panel metadata and helper copy |
 | Side-panel border | `--sidepanel-border` | `#e2e8f0` | Side-panel separators and rings |
-| Side-panel strong border | `--sidepanel-border-strong` | `#94a3b8` | Form-control boundaries |
+| Side-panel strong border | `--sidepanel-border-strong` | `#64748b` | Form-control boundaries |
 | Side-panel hover | `--sidepanel-hover` | `#f1f5f9` | Hover and scope surfaces |
 | Side-panel accent | `--sidepanel-accent` | `#0284c7` | Active readiness state |
 | Side-panel accent strong | `--sidepanel-accent-strong` | `#0369a1` | Primary actions and focus |
@@ -142,6 +142,12 @@ Layout:
 - Variants: success, error, neutral.
 - States: visible and auto-dismissed after four seconds in the product workspace.
 - Accessibility: `role=status` for neutral/success and `role=alert` for errors.
+
+### RunReport
+
+- Structure: latest-run status, saved/discovered/quarantined/skipped metrics, and data-quality warnings.
+- States: completed and empty. Historical records remain immutable even when a lead is recaptured later.
+- Accessibility: metrics use a descriptive list, status is textual, and the export action names its latest-run scope.
 
 ### SidePanelShell
 

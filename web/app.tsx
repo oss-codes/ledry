@@ -90,19 +90,20 @@ export function App() {
     filteredRecords[0]
   const selectedTab = snapshot?.tabs.find((tab) => tab.id === selectedTabId)
   const effectiveSelectedLeadId = selectedRecord?.lead.id
+  const latestRun = snapshot?.runs[0]
 
   async function handleExtract(): Promise<void> {
     if (selectedTab === undefined) return
     setExtracting(true)
     try {
-      const records = await extractTab(
+      const result = await extractTab(
         selectedTab.id,
         sourceTypeForUrl(selectedTab.url),
       )
       await refresh()
       setNotice({
         kind: "success",
-        message: `Saved ${records.length} lead${records.length === 1 ? "" : "s"}.`,
+        message: `Run complete: ${result.run.saved} saved, ${result.run.quarantined} quarantined, ${result.run.skipped} skipped.`,
       })
     } catch (error) {
       setNotice({
@@ -153,14 +154,54 @@ export function App() {
           <h1>Lead review workspace</h1>
         </div>
         <div className="top-actions">
-          <a className="button button-ghost" href="/api/export?format=csv">
-            Export CSV
+          <a
+            className="button button-ghost"
+            href={`/api/export?format=csv${latestRun === undefined ? "" : `&run=${encodeURIComponent(latestRun.id)}`}`}
+          >
+            {latestRun === undefined
+              ? "Export all CSV"
+              : "Export latest run CSV"}
           </a>
           <Button onClick={() => void refresh(true)}>Refresh</Button>
         </div>
       </header>
 
       <Metrics snapshot={snapshot} />
+
+      {latestRun === undefined ? null : (
+        <section className="run-report" aria-label="Latest research run">
+          <div>
+            <span>Latest run</span>
+            <strong>
+              {latestRun.status === "completed"
+                ? "Capture complete"
+                : "No safe leads found"}
+            </strong>
+          </div>
+          <dl>
+            <div>
+              <dt>Saved</dt>
+              <dd>{latestRun.saved}</dd>
+            </div>
+            <div>
+              <dt>Discovered</dt>
+              <dd>{latestRun.discovered}</dd>
+            </div>
+            <div>
+              <dt>Quarantined</dt>
+              <dd>{latestRun.quarantined}</dd>
+            </div>
+            <div>
+              <dt>Skipped</dt>
+              <dd>{latestRun.skipped}</dd>
+            </div>
+          </dl>
+          <small>
+            {latestRun.warnings.join(" · ") ||
+              "All captured records passed data-quality checks."}
+          </small>
+        </section>
+      )}
 
       <div className="filters">
         <label>

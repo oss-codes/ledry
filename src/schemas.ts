@@ -13,6 +13,14 @@ export const SourceTypeSchema = z.enum([
   "social",
 ])
 
+export const RequestedSourceSchema = z.enum([
+  "auto",
+  "google-maps",
+  "google-search",
+  "website",
+  "social",
+])
+
 export const EvidenceSchema = z.object({
   field: z.string().min(1).max(100),
   value: z.string().max(10_000),
@@ -55,6 +63,29 @@ export const LeadRecordSchema = z.object({
   qualificationStatus: QualificationStatusSchema,
 })
 
+export const ResearchRunSchema = z.object({
+  id: z.string().min(1),
+  brief: z.string().max(2_000),
+  tabId: z.number().int().nonnegative(),
+  requestedSource: RequestedSourceSchema,
+  actualSources: z.array(SourceTypeSchema),
+  limit: z.number().int().min(1).max(25),
+  discovered: z.number().int().nonnegative(),
+  saved: z.number().int().nonnegative(),
+  quarantined: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  status: z.enum(["completed", "empty"]),
+  warnings: z.array(z.string()),
+  startedAt: z.iso.datetime(),
+  completedAt: z.iso.datetime(),
+  recordIds: z.array(z.string()),
+})
+
+export const ResearchResultSchema = z.object({
+  run: ResearchRunSchema,
+  records: z.array(LeadRecordSchema),
+})
+
 export const HealthSchema = z.object({
   status: z.literal("ok"),
   extensionConnected: z.boolean(),
@@ -65,6 +96,7 @@ const DashboardSnapshotSchema = z.object({
   health: HealthSchema,
   tabs: z.array(TabSchema),
   records: z.array(LeadRecordSchema),
+  runs: z.array(ResearchRunSchema),
 })
 
 export const BrowserCommandSchema = z.discriminatedUnion("action", [
@@ -95,7 +127,7 @@ export const BrowserCommandSchema = z.discriminatedUnion("action", [
     requestId: z.uuid(),
     action: z.literal("leads.extract"),
     tabId: z.number().int().nonnegative(),
-    sourceType: z.enum(["google-maps", "google-search", "website", "social"]),
+    sourceType: RequestedSourceSchema,
   }),
 ])
 
@@ -114,6 +146,31 @@ const ExtensionResultSchema = z.discriminatedUnion("ok", [
   }),
 ])
 
+const ExtensionCaptureSchema = z.object({
+  type: z.literal("capture"),
+  requestId: z.uuid(),
+  tabId: z.number().int().nonnegative(),
+  sourceType: RequestedSourceSchema,
+  limit: z.number().int().min(1).max(25),
+  brief: z.string().max(2_000),
+  leads: z.array(LeadSchema).max(500),
+})
+
+export const ExtensionCaptureAckSchema = z.discriminatedUnion("ok", [
+  z.object({
+    type: z.literal("capture_ack"),
+    requestId: z.uuid(),
+    ok: z.literal(true),
+    run: ResearchRunSchema,
+  }),
+  z.object({
+    type: z.literal("capture_ack"),
+    requestId: z.uuid(),
+    ok: z.literal(false),
+    error: z.string(),
+  }),
+])
+
 export const ExtensionMessageSchema = z.union([
   z.object({
     type: z.literal("hello"),
@@ -122,6 +179,7 @@ export const ExtensionMessageSchema = z.union([
     version: z.string().min(1),
   }),
   ExtensionResultSchema,
+  ExtensionCaptureSchema,
 ])
 
 export type BrowserCommand = z.infer<typeof BrowserCommandSchema>
@@ -131,5 +189,8 @@ export type Health = z.infer<typeof HealthSchema>
 export type Lead = z.infer<typeof LeadSchema>
 export type LeadRecord = z.infer<typeof LeadRecordSchema>
 export type QualificationStatus = z.infer<typeof QualificationStatusSchema>
+export type RequestedSource = z.infer<typeof RequestedSourceSchema>
+export type ResearchRun = z.infer<typeof ResearchRunSchema>
+export type ResearchResult = z.infer<typeof ResearchResultSchema>
 export type SourceType = z.infer<typeof SourceTypeSchema>
 export type Tab = z.infer<typeof TabSchema>

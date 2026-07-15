@@ -50,6 +50,7 @@ export function LeadList({
                 </span>
               </button>
               <StatusControl
+                label={`Qualification for ${lead.name}`}
                 disabled={savingId === lead.id}
                 onChange={(status) => onQualify(lead.id, status)}
                 value={qualificationStatus}

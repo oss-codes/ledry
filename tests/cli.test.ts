@@ -32,7 +32,7 @@ const lead = {
   evidence: [],
   confidence: 0.8,
   score: 72,
-  tags: [],
+  tags: ["public-business-page"],
 } satisfies Lead
 
 async function runCli(home: string, args: readonly string[]) {
@@ -62,6 +62,13 @@ describe("CLI command wiring", () => {
     } satisfies AppConfig
     const store = new LeadStore(join(dataDirectory, "leads.sqlite"))
     store.save([lead])
+    const run = store.captureRun({
+      brief: "CLI coffee export",
+      leads: [lead],
+      limit: 5,
+      requestedSource: "website",
+      tabId: 1,
+    })
     const server = startBridgeServer(config, store)
     servers.push(server)
     await Bun.write(
@@ -83,5 +90,32 @@ describe("CLI command wiring", () => {
     expect(exported.exitCode).toBe(0)
     expect(JSON.parse(exported.stdout)[0]?.id).toBe(lead.id)
     expect(exported.stderr).toBe("")
+
+    const report = await runCli(home, ["report", "--run", "latest", "--json"])
+    expect(report.exitCode).toBe(0)
+    expect(JSON.parse(report.stdout).id).toBe(run.id)
+    expect(JSON.parse(report.stdout).qualifications).toEqual({
+      found: 0,
+      qualified: 1,
+      notQualified: 0,
+    })
+
+    const outputPath = join(home, "exports", "coffee.csv")
+    const runExport = await runCli(home, [
+      "export",
+      "--run",
+      "latest",
+      "--format",
+      "csv",
+      "--out",
+      outputPath,
+    ])
+    expect(runExport.exitCode).toBe(0)
+    expect(JSON.parse(runExport.stdout)).toMatchObject({
+      path: outputPath,
+      records: 1,
+      runId: run.id,
+    })
+    expect(await Bun.file(outputPath).text()).toContain("CLI Coffee")
   })
 })

@@ -4,17 +4,19 @@ import type {
   SidepanelTabState,
 } from "../extension/sidepanel-messages"
 import { presentStatus } from "../extension/sidepanel-state"
+import type { ResearchRun } from "../src/schemas"
 
 function status(
   tabState: SidepanelTabState | null,
   overrides: Partial<
-    Pick<SidepanelStatus, "bridgeConnected" | "configReady">
+    Pick<SidepanelStatus, "bridgeConnected" | "configReady" | "lastRun">
   > = {},
 ): SidepanelStatus {
   return {
     bridgeConnected: overrides.bridgeConnected ?? true,
     configReady: overrides.configReady ?? true,
     currentBrief: "",
+    lastRun: overrides.lastRun ?? null,
     tab:
       tabState === null
         ? null
@@ -82,5 +84,29 @@ describe("side panel status presentation", () => {
     expect(presentation.bridgeActivity).toBe("complete")
     expect(presentation.approvalActivity).toBe("complete")
     expect(presentation.researchActivity).toBe("active")
+  })
+
+  test("marks lead capture complete after a durable run", () => {
+    const run = {
+      id: "run:test",
+      brief: "Coffee roasters",
+      tabId: 42,
+      requestedSource: "auto",
+      actualSources: ["website"],
+      limit: 5,
+      discovered: 1,
+      saved: 1,
+      quarantined: 0,
+      skipped: 0,
+      status: "completed",
+      warnings: [],
+      startedAt: "2026-07-15T00:00:00.000Z",
+      completedAt: "2026-07-15T00:00:01.000Z",
+      recordIds: ["lead:1"],
+    } satisfies ResearchRun
+    const presentation = presentStatus(status("approved", { lastRun: run }))
+
+    expect(presentation.title).toBe("Research saved")
+    expect(presentation.researchActivity).toBe("complete")
   })
 })

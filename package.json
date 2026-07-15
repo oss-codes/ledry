@@ -30,6 +30,7 @@
     "web",
     "skills/ledry",
     "README.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "scripts": {

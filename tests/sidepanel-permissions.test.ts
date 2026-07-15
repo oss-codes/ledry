@@ -20,6 +20,23 @@ describe("side panel origin permission", () => {
     expect(requests).toEqual([{ origins: ["https://www.google.com/*"] }])
   })
 
+  test("approves the origin of a public LinkedIn organization page", async () => {
+    const requests: chrome.permissions.Permissions[] = []
+    const requester: PermissionRequester = {
+      async request(permissions) {
+        requests.push(permissions)
+        return true
+      },
+    }
+
+    await requestOriginPermission(
+      "https://www.linkedin.com/company/northstar/about/",
+      requester,
+    )
+
+    expect(requests).toEqual([{ origins: ["https://www.linkedin.com/*"] }])
+  })
+
   test("stops approval when Chrome denies access", async () => {
     const requester: PermissionRequester = {
       async request() {

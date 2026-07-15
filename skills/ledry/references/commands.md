@@ -29,7 +29,7 @@ ledry navigate --tab 123 --url "https://www.google.com/search?q=coffee+roasters+
 ledry scroll --tab 123 --amount 1200
 ```
 
-`navigate` reuses a tab the user already approved from Ledry's side panel, but only within that tab's approved origin. The toolbar icon opens the panel. Chrome revokes temporary access when the origin changes, so the user must open and approve each new origin. It accepts public HTTP(S) destinations, rejects LinkedIn, and rejects cross-origin transitions. `scroll` accepts 100-3000 pixels. Both commands keep browser activity visible to the user.
+`navigate` reuses a tab the user already approved from Ledry's side panel, but only within that tab's approved origin. The toolbar icon opens the panel. Chrome revokes temporary access when the origin changes, so the user must open and approve each new origin. It accepts public HTTP(S) destinations, limits LinkedIn to company and school pages, and rejects cross-origin transitions. `scroll` accepts 100-3000 pixels. Both commands keep browser activity visible to the user.
 
 ## Extraction
 
@@ -40,7 +40,17 @@ ledry scrape --tab 123 --source website
 ledry scrape --tab 123 --source social
 ```
 
-Extraction saves normalized leads and returns `{ saved, leads }`. Each lead contains source provenance and field evidence. The extension rejects LinkedIn tabs.
+Extraction saves at most 25 normalized leads and returns `{ saved, leads }`. Each lead contains source provenance and field evidence. Personal/private routes and pages without explicit business evidence are rejected.
+
+For normal work, use the durable run command:
+
+```bash
+ledry research --tab 123 --source auto --limit 5 --brief "Coffee roasters in Pune" --out pune-coffee.csv
+ledry report --run latest
+ledry export --run latest --format csv --out verified-leads.csv
+```
+
+`research` dynamically selects an adapter, caps records before persistence, counts unsafe candidates without retaining their contact data, stores an immutable report snapshot, and verifies the optional export file. `report` shows discovered, saved, quarantined, skipped, and qualification counts. `export` writes only the exact records attached to that run.
 
 ## Review and export
 

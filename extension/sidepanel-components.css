@@ -284,6 +284,99 @@
   line-height: 1.55;
 }
 
+.capture-controls,
+.run-result {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 15px;
+  text-align: left;
+  background: rgb(255 255 255 / 94%);
+  border: 1px solid var(--sidepanel-border);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 6%);
+}
+
+.capture-controls[hidden],
+.run-result[hidden] {
+  display: none;
+}
+
+.capture-controls h2,
+.run-result h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.capture-controls p,
+.run-result p {
+  margin: 5px 0 0;
+  color: var(--sidepanel-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.capture-controls label {
+  color: var(--sidepanel-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.capture-controls input {
+  min-height: 40px;
+  padding: 0 11px;
+  color: var(--sidepanel-text);
+  background: var(--sidepanel-canvas);
+  border: 1px solid var(--sidepanel-border-strong);
+  border-radius: var(--radius-control);
+}
+
+.run-result {
+  background: linear-gradient(135deg, #fff, var(--sidepanel-accent-soft));
+  border-color: rgb(2 132 199 / 24%);
+}
+
+.run-result-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.run-result dl {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.run-result dl div {
+  display: grid;
+  gap: 3px;
+}
+
+.run-result dt {
+  color: var(--sidepanel-muted);
+  font-size: 12px;
+}
+
+.run-result .approval-badge[data-state="completed"] {
+  color: var(--sidepanel-success);
+  background: var(--sidepanel-success-soft);
+}
+
+.run-result .approval-badge[data-state="empty"] {
+  color: var(--sidepanel-muted);
+  background: var(--sidepanel-hover);
+}
+
+.run-result dd {
+  margin: 0;
+  color: var(--sidepanel-accent-strong);
+  font-size: 18px;
+  font-weight: 750;
+}
+
 .brief-thread {
   display: grid;
   gap: 12px;
@@ -343,7 +436,7 @@
 }
 
 .workspace[data-has-brief="true"] .workspace-symbol,
-.workspace[data-has-brief="true"] .eyebrow {
+.workspace[data-has-brief="true"] .workspace-intro > .eyebrow {
   display: none;
 }
 

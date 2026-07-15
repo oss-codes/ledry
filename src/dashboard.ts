@@ -3,12 +3,14 @@ import dashboardStyles from "../web/dist/dashboard.css" with { type: "text" }
 import dashboardScript from "../web/dist/dashboard.js" with { type: "text" }
 import type { BrowserBridge } from "./bridge"
 import { serializeLeadRecords } from "./export"
-import { QualificationStatusSchema, SourceTypeSchema } from "./schemas"
+import { QualificationStatusSchema, RequestedSourceSchema } from "./schemas"
 import type { LeadStore } from "./store"
 
 const ExtractRequestSchema = z.object({
   tabId: z.number().int().nonnegative(),
-  sourceType: SourceTypeSchema,
+  sourceType: RequestedSourceSchema.default("auto"),
+  brief: z.string().trim().max(2_000).default(""),
+  limit: z.number().int().min(1).max(25).default(5),
 })
 const QualificationRequestSchema = z.object({
   qualificationStatus: QualificationStatusSchema,
@@ -139,16 +141,20 @@ export async function handleDashboardRequest(
       },
       tabs,
       records: context.store.listRecords(),
+      runs: context.store.listRuns(),
     })
   }
   if (request.method === "POST" && url.pathname === "/api/extract") {
     const input = ExtractRequestSchema.parse(await request.json())
     const leads = await context.bridge.extract(input.tabId, input.sourceType)
-    context.store.save(leads)
-    const ids = new Set(leads.map((lead) => lead.id))
-    return responseJson(
-      context.store.listRecords().filter((record) => ids.has(record.lead.id)),
-    )
+    const run = context.store.captureRun({
+      brief: input.brief,
+      leads,
+      limit: input.limit,
+      requestedSource: input.sourceType,
+      tabId: input.tabId,
+    })
+    return responseJson({ run, records: context.store.listRecords(run.id) })
   }
   const match = url.pathname.match(/^\/api\/records\/([^/]+)\/qualification$/)
   if (request.method === "PATCH" && match !== null) {
@@ -167,7 +173,16 @@ export async function handleDashboardRequest(
   }
   if (request.method === "GET" && url.pathname === "/api/export") {
     const format = ExportFormatSchema.parse(url.searchParams.get("format"))
-    const output = serializeLeadRecords(context.store.listRecords(), format)
+    const runId = url.searchParams.get("run") ?? undefined
+    const records = context.store.listRecords(runId)
+    const output = serializeLeadRecords(
+      runId === undefined
+        ? records.filter(
+            (record) => record.qualificationStatus !== "not-qualified",
+          )
+        : records,
+      format,
+    )
     const contentType = format === "csv" ? "text/csv" : "application/json"
     const headers = new Headers(secureHeaders(`${contentType}; charset=utf-8`))
     headers.set(
