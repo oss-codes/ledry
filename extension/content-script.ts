@@ -1,4 +1,5 @@
-import { sanitizePublicUrl } from "../src/url-policy"
+import { isAllowedPublicSourceUrl, sanitizePublicUrl } from "../src/url-policy"
+import { publicSnapshotRoot } from "./content-guard"
 import {
   detectSourceType,
   extractMaps,
@@ -20,6 +21,27 @@ type ContentRequest =
         | "website"
         | "social"
     }
+
+type ContentFailure = { readonly ledryError: string }
+
+function classifyCurrentPage() {
+  const rawUrl = window.location.href
+  const context = {
+    document,
+    pageUrl: sanitizePublicUrl(rawUrl),
+    capturedAt: new Date().toISOString(),
+  }
+  const sourceType = detectSourceType(context.pageUrl)
+  return {
+    context,
+    sourceType,
+    publicBusiness:
+      isAllowedPublicSourceUrl(rawUrl) &&
+      (sourceType === "google-maps" ||
+        sourceType === "google-search" ||
+        hasPublicBusinessEvidence(context)),
+  }
+}
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds))
@@ -89,39 +111,48 @@ if (document.documentElement.dataset["ledryInjected"] !== "true") {
   chrome.runtime.onMessage.addListener(
     (request: ContentRequest, _sender, respond) => {
       void (async () => {
-        const finishIndicator = showIndicator(
-          request.action === "extract"
-            ? "Ledry is finding public business data"
-            : `Ledry is controlling this ${request.action}`,
-        )
+        const finishIndicator =
+          request.action === "classify"
+            ? async () => undefined
+            : showIndicator(
+                request.action === "extract"
+                  ? "Ledry is finding public business data"
+                  : `Ledry is controlling this ${request.action}`,
+              )
         let response: unknown
+        const classification = classifyCurrentPage()
+        if (request.action !== "classify" && !classification.publicBusiness) {
+          const failure: ContentFailure = {
+            ledryError:
+              "This page no longer exposes explicit public business-page evidence",
+          }
+          await finishIndicator()
+          respond(failure)
+          return
+        }
         switch (request.action) {
           case "classify": {
-            const context = {
-              document,
-              pageUrl: sanitizePublicUrl(window.location.href),
-              capturedAt: new Date().toISOString(),
-            }
-            const sourceType = detectSourceType(context.pageUrl)
             response = {
-              sourceType,
-              publicBusiness:
-                sourceType === "google-maps" ||
-                sourceType === "google-search" ||
-                hasPublicBusinessEvidence(context),
+              sourceType: classification.sourceType,
+              publicBusiness: classification.publicBusiness,
             }
             break
           }
-          case "snapshot":
-            response = {
-              title: document.title,
-              url: sanitizePublicUrl(window.location.href),
-              text: (
-                document.querySelector("main")?.textContent ??
-                document.body.innerText
-              ).slice(0, 20_000),
-            }
+          case "snapshot": {
+            const root = publicSnapshotRoot(document, classification.sourceType)
+            response =
+              root === null
+                ? ({
+                    ledryError:
+                      "No public results container is visible on this page",
+                  } satisfies ContentFailure)
+                : {
+                    title: document.title,
+                    url: classification.context.pageUrl,
+                    text: (root.textContent ?? "").slice(0, 20_000),
+                  }
             break
+          }
           case "scroll":
             window.scrollBy({
               top: request.amount,
@@ -133,11 +164,7 @@ if (document.documentElement.dataset["ledryInjected"] !== "true") {
             response = { scrolled: request.amount }
             break
           case "extract": {
-            const context = {
-              document,
-              pageUrl: sanitizePublicUrl(window.location.href),
-              capturedAt: new Date().toISOString(),
-            }
+            const { context } = classification
             const sourceType =
               request.sourceType === "auto"
                 ? detectSourceType(context.pageUrl)

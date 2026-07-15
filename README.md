@@ -37,7 +37,7 @@ bun link
 ledry pair
 ```
 
-Open `chrome://extensions`, enable Developer mode, select **Load unpacked**, and choose the printed `extension` directory. Paste the port and token shown by `ledry pair` into the extension options page. Open a source tab, click the extension toolbar icon to open Ledry's side panel, then approve that origin in the panel. The CLI cannot see or extract unapproved tabs.
+Open `chrome://extensions`, enable Developer mode, select **Load unpacked**, and choose the printed `extension` directory. Paste the port and token shown by `ledry pair` into the extension options page. Open Google Maps or another public source, click the Ledry toolbar icon, choose the exact tab, and select **Allow selected tab**. After Chrome grants that origin, select **Open Ledry**. The CLI cannot see or extract unapproved tabs.
 
 Start the interactive application:
 
@@ -71,6 +71,8 @@ ledry records --format json
 ledry qualify --id lead_123 --status qualified
 ```
 
+`ledry tabs --json` marks the tab chosen in the extension picker with `"selected": true`, so Claude Code, Codex, OpenCode, and other shell-capable agents can follow the user's intended source without guessing.
+
 Navigation stays within the tab's user-approved origin. Open and approve a tab again before an agent works on a different origin. LinkedIn is limited to public company and school pages; profiles, feeds, messages, account pages, analytics, and settings remain blocked. Generic websites and social pages are persisted only when the page exposes explicit organization or business-page evidence; ambiguous personal pages fail closed.
 
 An agent workflow is intentionally shell-based and vendor-neutral: start the dashboard daemon, reuse a user-approved tab for visible navigation and scrolling, scrape within the user's scope, inspect `records`, and apply only user-provided qualification criteria with `qualify`. Claude Code, Codex, OpenCode, Hermes, and other agents that can follow an Agent Skill and invoke local commands use the same contract. Pairing remains user-only because it prints the local secret.
@@ -92,7 +94,8 @@ The format and install locations are documented by [Claude Code](https://code.cl
 - The dashboard uses an HttpOnly same-site session cookie; state-changing browser requests must be same-origin.
 - Extension connections require a generated local token.
 - Browser session cookies are never sent to the CLI.
-- Chrome permissions are limited to active-tab access, the side panel, scripting, storage, and per-origin HTTP(S) access granted when the user approves a tab.
+- The `tabs` permission populates the user-invoked tab picker with titles and URLs; page reads and browser control still require separately granted per-origin HTTP(S) access.
+- Chrome access is otherwise limited to the active tab, the side panel, scripting, storage, and the exact HTTP(S) origins the user approves.
 - The extension rejects personal/private social routes and only permits public LinkedIn organization pages.
 - Unsafe candidates are counted with a reason and source type, but their names and contact details are not retained in quarantine.
 - Lead fields retain source URLs and field-level evidence.

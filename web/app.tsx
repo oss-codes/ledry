@@ -36,7 +36,8 @@ export function App() {
       setSelectedTabId((existing) =>
         current.tabs.some((tab) => tab.id === existing)
           ? existing
-          : current.tabs[0]?.id,
+          : (current.tabs.find((tab) => tab.selected)?.id ??
+            current.tabs[0]?.id),
       )
       setSelectedLeadId((existing) =>
         current.records.some((record) => record.lead.id === existing)

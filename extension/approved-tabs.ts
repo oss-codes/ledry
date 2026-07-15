@@ -1,7 +1,40 @@
 import { sanitizePublicUrl } from "../src/url-policy"
 import { isAllowedUrl } from "./policy"
 
-type ApprovedTab = { readonly id: number; readonly origin: string }
+export type ApprovedTab = {
+  readonly id: number
+  readonly origin: string
+  readonly url?: string
+}
+
+export async function selectedResearchTabId(): Promise<number | null> {
+  const stored = await chrome.storage.session.get("selectedResearchTabId")
+  const selected: unknown = stored["selectedResearchTabId"]
+  return typeof selected === "number" && Number.isInteger(selected)
+    ? selected
+    : null
+}
+
+export async function selectResearchTab(tabId: number): Promise<void> {
+  await chrome.storage.session.set({ selectedResearchTabId: tabId })
+}
+
+export async function selectedResearchTab(): Promise<chrome.tabs.Tab | null> {
+  const tabId = await selectedResearchTabId()
+  if (tabId === null) return null
+  try {
+    return await chrome.tabs.get(tabId)
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /No tab with id|Invalid tab ID|tab not found/i.test(error.message)
+    ) {
+      await chrome.storage.session.remove("selectedResearchTabId")
+      return null
+    }
+    throw error
+  }
+}
 
 export async function approvedTabs(): Promise<readonly ApprovedTab[]> {
   const stored = await chrome.storage.session.get("approvedTabs")
@@ -15,18 +48,27 @@ export async function approvedTabs(): Promise<readonly ApprovedTab[]> {
       !("origin" in item)
     )
       return []
+    const url =
+      "url" in item && typeof item.url === "string" ? item.url : undefined
     return typeof item.id === "number" && typeof item.origin === "string"
-      ? [{ id: item.id, origin: item.origin }]
+      ? [
+          {
+            id: item.id,
+            origin: item.origin,
+            ...(url === undefined ? {} : { url }),
+          },
+        ]
       : []
   })
 }
 
-async function rememberApprovedTab(tabId: number, origin: string) {
+async function rememberApprovedTab(tabId: number, rawUrl: string) {
   const current = await approvedTabs()
+  const url = sanitizePublicUrl(rawUrl)
   await chrome.storage.session.set({
     approvedTabs: [
       ...current.filter((item) => item.id !== tabId),
-      { id: tabId, origin },
+      { id: tabId, origin: new URL(url).origin, url },
     ],
   })
 }
@@ -60,59 +102,80 @@ async function requirePublicBusinessPage(tabId: number): Promise<void> {
 
 export async function assertApprovedTab(tabId: number): Promise<void> {
   const tab = await chrome.tabs.get(tabId)
+  await validateApprovedTab(tab)
+}
+
+async function validateApprovedTab(tab: chrome.tabs.Tab): Promise<void> {
+  if (tab.id === undefined) throw new Error("The browser tab is no longer open")
   if (tab.url === undefined || !isAllowedUrl(tab.url)) {
-    await forgetApprovedTab(tabId)
+    await forgetApprovedTab(tab.id)
     throw new Error("This source is outside the project's scope")
   }
   const origin = new URL(tab.url).origin
-  if (
-    !(await approvedTabs()).some(
-      (item) => item.id === tabId && item.origin === origin,
-    )
+  const approved = (await approvedTabs()).find(
+    (item) => item.id === tab.id && item.origin === origin,
   )
+  if (approved === undefined)
     throw new Error("Approve this origin from the Ledry side panel first")
   try {
-    await requirePublicBusinessPage(tabId)
+    await requirePublicBusinessPage(tab.id)
+    if (approved.url !== sanitizePublicUrl(tab.url))
+      await rememberApprovedTab(tab.id, tab.url)
   } catch (error) {
-    await forgetApprovedTab(tabId)
+    await forgetApprovedTab(tab.id)
     throw error
+  }
+}
+
+export async function isApprovedTab(tab: chrome.tabs.Tab): Promise<boolean> {
+  try {
+    await validateApprovedTab(tab)
+    return true
+  } catch {
+    return false
   }
 }
 
 export async function listApprovedTabs(): Promise<
   readonly {
     readonly id: number
+    readonly selected: boolean
     readonly title: string
     readonly url: string
   }[]
 > {
-  const [tabs, approved] = await Promise.all([
+  const [tabs, selectedId] = await Promise.all([
     chrome.tabs.query({}),
-    approvedTabs(),
+    selectedResearchTabId(),
   ])
-  const results: { id: number; title: string; url: string }[] = []
+  const results: {
+    id: number
+    selected: boolean
+    title: string
+    url: string
+  }[] = []
   for (const tab of tabs) {
     if (tab.id === undefined || tab.url === undefined) continue
-    const origin = new URL(tab.url).origin
-    if (!approved.some((item) => item.id === tab.id && item.origin === origin))
-      continue
     try {
       await assertApprovedTab(tab.id)
       const current = await chrome.tabs.get(tab.id)
       if (
         current.url === undefined ||
         !isAllowedUrl(current.url) ||
-        new URL(current.url).origin !== origin
+        new URL(current.url).origin !== new URL(tab.url).origin
       )
         continue
       results.push({
         id: tab.id,
+        selected: tab.id === selectedId,
         title: current.title ?? "Untitled",
         url: sanitizePublicUrl(current.url),
       })
     } catch {}
   }
-  return results
+  return results.sort(
+    (left, right) => Number(right.selected) - Number(left.selected),
+  )
 }
 
 export async function approveTab(
@@ -121,15 +184,22 @@ export async function approveTab(
   if (tab.id === undefined || tab.url === undefined || !isAllowedUrl(tab.url)) {
     if (tab.id !== undefined) await forgetApprovedTab(tab.id)
     await chrome.action.setBadgeText({ text: "NO", tabId: tab.id })
-    return
+    throw new Error("This tab cannot be approved as a public research source")
   }
+  const current = await chrome.tabs.get(tab.id)
+  if (
+    current.url === undefined ||
+    !isAllowedUrl(current.url) ||
+    new URL(current.url).origin !== new URL(tab.url).origin
+  )
+    throw new Error("The selected tab changed before approval")
   try {
     await requirePublicBusinessPage(tab.id)
   } catch (error) {
     await chrome.action.setBadgeText({ text: "NO", tabId: tab.id })
     throw error
   }
-  await rememberApprovedTab(tab.id, new URL(tab.url).origin)
+  await rememberApprovedTab(tab.id, current.url)
   await chrome.action.setBadgeText({ text: "OK", tabId: tab.id })
   await chrome.action.setBadgeBackgroundColor({
     color: "#16a34a",
@@ -168,6 +238,7 @@ export async function navigateApprovedTab(
   }
   try {
     await requirePublicBusinessPage(tabId)
+    await rememberApprovedTab(tabId, tab.url)
   } catch (error) {
     await forgetApprovedTab(tabId)
     throw error

@@ -83,7 +83,14 @@ export const DashboardSnapshotSchema = object({
     extensionConnected: boolean(),
     version: string(),
   }),
-  tabs: array(object({ id: number(), title: string(), url: string() })),
+  tabs: array(
+    object({
+      id: number(),
+      selected: boolean(),
+      title: string(),
+      url: string(),
+    }),
+  ),
   records: LeadRecordsSchema,
   runs: array(ResearchRunSchema),
 })

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>Choose a research tab — Ledry</title>
+    <link rel="stylesheet" href="dist/popup.css" />
+  </head>
+  <body>
+    <div class="popup-shell">
+      <header class="popup-header">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">L</span>
+          <span class="brand-name">Ledry</span>
+        </div>
+        <span class="privacy-label">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 20 5v6c0 5-3.4 9.7-8 11-4.6-1.3-8-6-8-11V5l8-3Zm0 3.1L7 7v4c0 3.5 2.1 6.9 5 8 2.9-1.1 5-4.5 5-8V7l-5-1.9Z" /></svg>
+          Local only
+        </span>
+      </header>
+
+      <main class="popup-main">
+        <p class="eyebrow">Research access</p>
+        <h1>Choose a tab to allow</h1>
+        <p class="popup-description">Select the public page Ledry should use. Page access stays limited to the origin you approve.</p>
+
+        <div id="notice" class="popup-notice" role="status" aria-live="polite">
+          Open-tab metadata stays local. Only the tab you explicitly allow is exposed to a connected agent; browser cookies are never sent.
+        </div>
+
+        <fieldset class="tab-picker">
+          <legend>Open research tabs</legend>
+          <div id="tab-list" class="tab-list" aria-describedby="picker-help"></div>
+        </fieldset>
+        <p id="picker-help" class="picker-help">Google Maps, Search, public company pages, and business websites are supported.</p>
+      </main>
+
+      <footer class="popup-footer">
+        <button id="refresh-tabs" class="button button-secondary refresh-button" type="button">Refresh</button>
+        <button id="allow-tab" class="button button-primary allow-button" type="button" disabled>Allow selected tab</button>
+      </footer>
+    </div>
+    <script type="module" src="dist/popup.js"></script>
+  </body>
+</html>

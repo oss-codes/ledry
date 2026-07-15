@@ -48,7 +48,7 @@ export function presentStatus(status: SidepanelStatus): SidepanelPresentation {
     return {
       title: "Open a research source",
       description:
-        "Choose a public Google or website tab, then return here to approve it.",
+        "Click the Ledry toolbar icon, choose a public Maps or website tab, and allow it.",
       approvalLabel: "Approve tab",
       canApprove: false,
       bridgeActivity: "complete",

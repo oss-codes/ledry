@@ -134,6 +134,7 @@ describe("local bridge", () => {
     expect(await client.tabs()).toEqual([
       {
         id: 7,
+        selected: false,
         title: "Coffee shops",
         url: "https://www.google.com/maps/search/coffee",
       },

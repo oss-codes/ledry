@@ -1,10 +1,11 @@
+import { approvedTabs } from "./approved-tabs"
 import {
   type SidepanelRequest,
   SidepanelResponseSchema,
   type SidepanelStatus,
   SidepanelTabStateSchema,
 } from "./sidepanel-messages"
-import { requestOriginPermission } from "./sidepanel-permissions"
+import { withOriginPermission } from "./sidepanel-permissions"
 export interface SidepanelTransport {
   approveTab(tabId: number, url: string): Promise<SidepanelStatus>
   request(request: SidepanelRequest): Promise<SidepanelStatus>
@@ -16,12 +17,21 @@ class SidepanelTransportError extends Error {
 
 class RuntimeTransport implements SidepanelTransport {
   async approveTab(tabId: number, url: string): Promise<SidepanelStatus> {
-    await requestOriginPermission(url)
-    return await this.request({
-      type: "sidepanel.tab.approve",
-      tabId,
-      origin: new URL(url).origin,
-    })
+    const origin = new URL(url).origin
+    return await withOriginPermission(
+      url,
+      async () =>
+        this.request({
+          type: "sidepanel.tab.approve",
+          tabId,
+          origin,
+        }),
+      chrome.permissions,
+      async () =>
+        !(await approvedTabs()).some(
+          (approved) => approved.id === tabId && approved.origin === origin,
+        ),
+    )
   }
 
   async request(request: SidepanelRequest): Promise<SidepanelStatus> {

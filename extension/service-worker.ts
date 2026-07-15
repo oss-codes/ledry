@@ -6,6 +6,7 @@ import {
   LeadSchema,
   type ResearchRun,
 } from "../src/schemas"
+import { configureActionPopup } from "./action-behavior"
 import {
   assertApprovedTab,
   listApprovedTabs,
@@ -48,6 +49,21 @@ const pendingCaptures = new Map<
     readonly timer: ReturnType<typeof setTimeout>
   }
 >()
+
+async function sendPageMessage(
+  tabId: number,
+  message: object,
+): Promise<unknown> {
+  const response: unknown = await chrome.tabs.sendMessage(tabId, message)
+  if (
+    typeof response === "object" &&
+    response !== null &&
+    "ledryError" in response &&
+    typeof response.ledryError === "string"
+  )
+    throw new Error(response.ledryError)
+  return response
+}
 
 function connect(): void {
   if (socket !== undefined) return
@@ -192,7 +208,7 @@ async function captureFromPanel(
   const leads = LeadSchema.array()
     .max(500)
     .parse(
-      await chrome.tabs.sendMessage(tabId, {
+      await sendPageMessage(tabId, {
         action: "extract",
         sourceType: "auto",
       }),
@@ -256,18 +272,18 @@ async function execute(command: BrowserCommand): Promise<unknown> {
       return await navigateApprovedTab(command.tabId, command.url)
     case "page.snapshot":
       await assertApprovedTab(command.tabId)
-      return await chrome.tabs.sendMessage(command.tabId, {
+      return await sendPageMessage(command.tabId, {
         action: "snapshot",
       })
     case "page.scroll":
       await assertApprovedTab(command.tabId)
-      return await chrome.tabs.sendMessage(command.tabId, {
+      return await sendPageMessage(command.tabId, {
         action: "scroll",
         amount: command.amount,
       })
     case "leads.extract":
       await assertApprovedTab(command.tabId)
-      return await chrome.tabs.sendMessage(command.tabId, {
+      return await sendPageMessage(command.tabId, {
         action: "extract",
         sourceType: command.sourceType,
       })
@@ -283,8 +299,8 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 })
 registerSidepanelMessages(() => bridgeAuthenticated, captureFromPanel)
 chrome.runtime.onInstalled.addListener(() => {
+  void configureActionPopup()
   void chrome.runtime.openOptionsPage()
-  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
 })
-void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+void configureActionPopup()
 connect()

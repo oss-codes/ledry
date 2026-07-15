@@ -167,6 +167,19 @@ Layout:
 - Accessibility: approval is textual as well as chromatic; the action remains
   at least 40px tall and never grants cross-origin access implicitly.
 
+### TabPickerPopup
+
+- Structure: compact Ledry header, privacy note, radio list of eligible public
+  tabs, refresh action, and one primary allow/open action.
+- States: loading, no supported tabs, available, selected, requesting origin
+  permission, allowed, opening side panel, and error.
+- Accessibility: native radio controls preserve arrow-key selection, every row
+  includes source plus origin, status is textual, and actions remain at least
+  40px tall.
+- Privacy: the `tabs` permission is used only to populate this user-invoked
+  picker; page reads and control remain restricted to the exact origin the user
+  approves through Chrome's permission prompt.
+
 ### TaskComposer
 
 - Structure: labelled multiline research brief, truthful approved-origin scope,

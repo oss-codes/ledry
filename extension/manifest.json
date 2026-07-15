@@ -4,14 +4,15 @@
   "version": "0.1.0",
   "description": "Connect approved browser tabs to the local Ledry.",
   "minimum_chrome_version": "116",
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "tabs"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": {
     "service_worker": "dist/service-worker.js",
     "type": "module"
   },
   "action": {
-    "default_title": "Ledry"
+    "default_title": "Choose a research tab",
+    "default_popup": "popup.html"
   },
   "side_panel": {
     "default_path": "sidepanel.html"

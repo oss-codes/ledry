@@ -45,7 +45,7 @@
     "build": "bun run build:assets && bun build src/cli.tsx --compile --outfile dist/ledry",
     "build:assets": "bun run build:dashboard && bun run build:extension",
     "build:dashboard": "bun build web/main.tsx --outdir web/dist --entry-naming 'dashboard.[ext]' --chunk-naming 'chunks/[name]-[hash].[ext]' --target browser --format esm --production --external react-grab --external react-scan",
-    "build:extension": "bun build extension/service-worker.ts extension/content-script.ts extension/options.ts extension/sidepanel.ts --outdir extension/dist --target browser --format esm",
+    "build:extension": "bun build extension/service-worker.ts extension/content-script.ts extension/options.ts extension/popup.ts extension/sidepanel.ts --outdir extension/dist --target browser --format esm",
     "postinstall": "bun run build:assets",
     "prepack": "bun run clean && bun run build:assets",
     "skill:validate": "bun run scripts/validate-skill.ts"

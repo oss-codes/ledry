@@ -2,6 +2,7 @@ import { z } from "zod"
 
 export const TabSchema = z.object({
   id: z.number().int().nonnegative(),
+  selected: z.boolean().default(false),
   title: z.string().max(500),
   url: z.url().max(4096),
 })

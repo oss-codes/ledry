@@ -1,0 +1,222 @@
+@import "./sidepanel.css";
+
+html,
+body {
+  width: 376px;
+  min-width: 376px;
+  min-height: 0;
+}
+
+body {
+  overflow: auto;
+  background: var(--sidepanel-canvas);
+}
+
+.popup-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: 580px;
+  background:
+    radial-gradient(circle at 90% 5%, rgb(56 189 248 / 10%), transparent 34%),
+    var(--sidepanel-canvas);
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: var(--space-2) var(--space-4);
+  background: rgb(255 255 255 / 92%);
+  border-bottom: 1px solid var(--sidepanel-border);
+}
+
+.privacy-label {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--sidepanel-success);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.privacy-label svg {
+  width: 16px;
+  fill: currentcolor;
+}
+
+.popup-main {
+  min-height: 0;
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  overflow-y: auto;
+}
+
+.popup-main h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.popup-description {
+  margin: var(--space-2) 0 0;
+  color: var(--sidepanel-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.popup-notice {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  color: var(--sidepanel-accent-strong);
+  font-size: 12px;
+  line-height: 1.45;
+  background: var(--sidepanel-accent-soft);
+  border: 1px solid var(--sidepanel-border);
+  border-radius: var(--radius-control);
+}
+
+.popup-notice[data-tone="success"] {
+  color: var(--sidepanel-success);
+  background: var(--sidepanel-success-soft);
+}
+
+.popup-notice[data-tone="error"] {
+  color: var(--sidepanel-danger);
+  background: var(--sidepanel-danger-soft);
+}
+
+.tab-picker {
+  min-width: 0;
+  padding: 0;
+  margin: var(--space-5) 0 0;
+  border: 0;
+}
+
+.tab-picker legend {
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tab-list {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.tab-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: 64px;
+  padding: var(--space-3);
+  cursor: pointer;
+  background: var(--sidepanel-surface);
+  border: 1px solid var(--sidepanel-border);
+  border-radius: var(--radius-panel);
+  transition:
+    background 120ms ease-out,
+    border-color 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+.tab-option:hover {
+  background: var(--sidepanel-hover);
+}
+
+.tab-option:active {
+  transform: translateY(1px);
+}
+
+.tab-option[data-selected="true"] {
+  background: linear-gradient(
+    135deg,
+    var(--sidepanel-surface),
+    var(--sidepanel-accent-soft)
+  );
+  border-color: var(--sidepanel-accent);
+}
+
+.tab-option input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--sidepanel-accent-strong);
+}
+
+.tab-copy {
+  min-width: 0;
+}
+
+.tab-copy strong,
+.tab-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-copy strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.tab-copy small {
+  margin-top: var(--space-1);
+  color: var(--sidepanel-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.tab-state {
+  align-self: start;
+  color: var(--sidepanel-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tab-state[data-approved="true"] {
+  color: var(--sidepanel-success);
+}
+
+.empty-tabs {
+  padding: var(--space-5);
+  color: var(--sidepanel-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  background: var(--sidepanel-surface);
+  border: 1px dashed var(--sidepanel-border-strong);
+  border-radius: var(--radius-panel);
+}
+
+.picker-help {
+  margin: var(--space-3) 0 0;
+  color: var(--sidepanel-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.popup-footer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--sidepanel-surface);
+  border-top: 1px solid var(--sidepanel-border);
+}
+
+.popup-footer .button {
+  grid-column: auto;
+}
+
+.refresh-button {
+  width: auto;
+}
+
+.allow-button {
+  min-width: 0;
+}

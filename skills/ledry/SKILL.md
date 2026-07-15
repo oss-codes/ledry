@@ -16,7 +16,7 @@ Run `ledry --help`. If it is unavailable and the current repository contains `sr
 1. Run `ledry doctor`.
 2. If the daemon is unavailable, start `ledry dashboard --no-open` in a managed background terminal. This also serves the browser workspace at the printed loopback URL. Use `ledry serve` when no human dashboard is needed.
 3. If the extension is offline, stop and ask the user to run `ledry pair` themselves in a separate terminal, load the printed extension directory in `chrome://extensions`, and enter the local port and token in its options page. The agent must never execute `pair`, because command output contains the secret token.
-4. Ask the user to open each intended source tab, click the extension toolbar icon to open Ledry's side panel, and approve that origin in the panel.
+4. Ask the user to open each intended source tab and click the Ledry toolbar icon. In the picker, they choose the exact tab, select **Allow selected tab**, accept Chrome's origin prompt, then select **Open Ledry**.
 5. Run `ledry doctor` again. Continue only when it reports `Extension: connected`.
 
 Never print, copy into chat, or transmit the pairing token. Let the user read it directly from their terminal.
@@ -24,7 +24,7 @@ Never print, copy into chat, or transmit the pairing token. Let the user read it
 ## Research leads
 
 1. Establish the requested niche, geography, evidence fields, and maximum lead count from the user's request. Ask only when a missing value materially changes the result.
-2. Run `ledry tabs --json` and select only a user-approved, relevant tab.
+2. Run `ledry tabs --json`. Prefer the relevant tab with `selected: true`; this is the tab the user explicitly chose in the extension picker. Use another approved tab only when the user's request clearly identifies it.
 3. Reuse an approved tab only within its current origin with `ledry navigate --tab <id> --url <same-origin-public-http-url>`. Chrome revokes temporary access when an origin changes, so ask the user to open and approve each new origin before continuing. LinkedIn is limited to public company and school pages. Never navigate outside the user's requested research scope.
 4. Use `ledry scroll --tab <id> --amount 1200` to reveal more results when needed. Re-list tabs after navigation and stop if the approved tab is no longer available.
 5. Choose the adapter:

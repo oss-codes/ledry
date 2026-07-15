@@ -9,6 +9,11 @@ describe("source policy", () => {
     expect(isAllowedUrl("https://www.google.co.in/maps/search/plumbers")).toBe(
       true,
     )
+    expect(isAllowedUrl("https://www.google.com/maps/timeline")).toBe(false)
+    expect(isAllowedUrl("https://www.google.com/maps/saved")).toBe(false)
+    expect(
+      isAllowedUrl("https://www.google.com/maps/contrib/123/reviews"),
+    ).toBe(false)
     expect(isAllowedUrl("https://example.com/contact")).toBe(true)
   })
 
@@ -37,8 +42,58 @@ describe("source policy", () => {
     expect(isAllowedUrl("https://example.com/dashboard/leads")).toBe(false)
     expect(isAllowedUrl("https://example.com/portal")).toBe(false)
     expect(isAllowedUrl("https://example.com/%70ortal")).toBe(false)
+    expect(isAllowedUrl("https://example.com/%41ccount")).toBe(false)
+    expect(isAllowedUrl("https://example.com/%2541ccount")).toBe(false)
+    expect(isAllowedUrl("https://instagram.com/my-account")).toBe(false)
+    expect(isAllowedUrl("https://instagram.com/wp-admin")).toBe(false)
     expect(isAllowedUrl("https://example.com/home")).toBe(false)
     expect(isAllowedUrl("https://instagram.com/%E0%A4%A")).toBe(false)
+    expect(isAllowedUrl("https://example.com/#access_token=abc123")).toBe(false)
+    expect(isAllowedUrl("https://example.com/#id_token=eyJabc.def.ghi")).toBe(
+      false,
+    )
+    expect(isAllowedUrl("https://example.com/#/account?view=private")).toBe(
+      false,
+    )
+    expect(isAllowedUrl("https://example.com/#%2Faccount%3Ftoken%3Dabc")).toBe(
+      false,
+    )
+    for (const fragment of [
+      "account",
+      "dashboard",
+      "profile",
+      "!dashboard",
+      "route=/account",
+      "customer-portal",
+      "accounts",
+      "manage",
+      "member",
+      "app",
+      "/team",
+      "route=/team",
+      "/my-account",
+      "/wp-admin",
+      "/Account",
+      "/%41ccount",
+      "!/DASHBOARD",
+      "%2FSETTINGS",
+    ])
+      expect(isAllowedUrl(`https://example.com/#${fragment}`)).toBe(false)
+    expect(isAllowedUrl("https://example.com/#about")).toBe(true)
+    expect(isAllowedUrl("https://example.com/#team")).toBe(true)
+    expect(isAllowedUrl("https://example.com/#people")).toBe(true)
+    let deeplyEncodedSecret = "token=abc"
+    let deeplyEncodedRoute = "/account"
+    for (let pass = 0; pass < 10; pass += 1) {
+      deeplyEncodedSecret = encodeURIComponent(deeplyEncodedSecret)
+      deeplyEncodedRoute = encodeURIComponent(deeplyEncodedRoute)
+    }
+    expect(isAllowedUrl(`https://example.com/#${deeplyEncodedSecret}`)).toBe(
+      false,
+    )
+    expect(isAllowedUrl(`https://example.com/#${deeplyEncodedRoute}`)).toBe(
+      false,
+    )
     for (const key of [
       "token",
       "refresh_token",
@@ -91,5 +146,14 @@ describe("source policy", () => {
     expect(
       permissionPatternForUrl("https://www.google.com/maps/search/coffee"),
     ).toBe("https://www.google.com/*")
+    expect(
+      permissionPatternForUrl("https://user:pass@www.google.com/"),
+    ).toBeNull()
+    expect(
+      permissionPatternForUrl("https://www.google.com/?token=abc"),
+    ).toBeNull()
+    expect(
+      permissionPatternForUrl("https://www.google.com/#/account"),
+    ).toBeNull()
   })
 })

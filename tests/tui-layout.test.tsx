@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { testRender } from "@opentui/react/test-utils"
 import { act } from "react"
 import stringWidth from "string-width"
+import { formatBrowserTab } from "../src/browser-cli"
 import type { Lead, LeadRecord, Tab } from "../src/schemas"
 import {
   Dashboard,
@@ -13,9 +14,15 @@ import { sanitizeTerminalText, truncateCells } from "../src/tui-text"
 import { DashboardView, tabRowLimit, visibleTabRange } from "../src/tui-view"
 
 const tabs: readonly Tab[] = [
-  { id: 1, title: "Alpha Bakery", url: "https://example.com/alpha" },
+  {
+    id: 1,
+    selected: true,
+    title: "Alpha Bakery",
+    url: "https://example.com/alpha",
+  },
   {
     id: 2,
+    selected: false,
     title: "Beta Studio",
     url: "https://www.instagram.com/beta-studio",
   },
@@ -133,6 +140,17 @@ describe("OpenTUI dashboard", () => {
     expect(safe).toContain("�")
   })
 
+  test("marks the browser-selected tab and sanitizes CLI tab output", () => {
+    expect(
+      formatBrowserTab({
+        id: 7,
+        selected: true,
+        title: "Map\u001b]52;c;clipboard\u0007",
+        url: "https://example.com/\u202Espoof",
+      }),
+    ).toBe("*\t7\tMap�]52;c;clipboard�\thttps://example.com/�spoof")
+  })
+
   test("renders hostile page data without terminal control sequences", async () => {
     const setup = await testRender(
       <DashboardView
@@ -155,6 +173,7 @@ describe("OpenTUI dashboard", () => {
         tabs={[
           {
             id: 9,
+            selected: true,
             title: "Page\u001b]52;c;clipboard\u0007",
             url: "https://example.com/\u202Espoof",
           },

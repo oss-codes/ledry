@@ -1,5 +1,5 @@
 import { type ResearchRun, ResearchRunSchema } from "../src/schemas"
-import { approvedTabs, approveTab } from "./approved-tabs"
+import { approveTab, isApprovedTab, selectedResearchTab } from "./approved-tabs"
 import { isAllowedUrl } from "./policy"
 import {
   type SidepanelRequest,
@@ -21,13 +21,13 @@ export async function readExtensionConfig(): Promise<ExtensionConfig> {
 }
 
 async function readStatus(bridgeConnected: boolean): Promise<SidepanelStatus> {
-  const [config, values, tabs, approved] = await Promise.all([
+  const [config, values, tabs, selectedTab] = await Promise.all([
     readExtensionConfig(),
     chrome.storage.local.get(["currentBrief", "lastRun"]),
     chrome.tabs.query({ active: true, currentWindow: true }),
-    approvedTabs(),
+    selectedResearchTab(),
   ])
-  const activeTab = tabs[0]
+  const activeTab = selectedTab ?? tabs[0]
   const rawBrief = values["currentBrief"]
   const currentBrief =
     typeof rawBrief === "string" ? rawBrief.slice(0, 2_000) : ""
@@ -45,12 +45,7 @@ async function readStatus(bridgeConnected: boolean): Promise<SidepanelStatus> {
 
   const allowed = isAllowedUrl(activeTab.url)
   const origin = allowed ? new URL(activeTab.url).origin : null
-  const approvedForOrigin =
-    origin !== null &&
-    approved.some(
-      (candidate) =>
-        candidate.id === activeTab.id && candidate.origin === origin,
-    )
+  const approvedForOrigin = origin !== null && (await isApprovedTab(activeTab))
 
   return {
     bridgeConnected,

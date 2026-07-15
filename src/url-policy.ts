@@ -2,6 +2,8 @@ const PRIVATE_ROUTE =
   /\/(?:account|accounts|admin|analytics|app|author|billing|checkout|client|clients|console|customer|customer-portal|customers|dashboard|direct|inbox|internal|login|manage|member|messages|people|portal|profile|secure|settings|staff|team|users|workspace)(?:\/|$)/
 const AUTHENTICATED_ROUTE =
   /\/(?:admin|analytics|dashboard|direct|inbox|internal|manage|messages|my-account|profile|settings|users|workspace|wp-admin)(?:\/|$)/
+const PRIVATE_FRAGMENT_SEGMENT =
+  /^(?:account|accounts|admin|analytics|app|billing|checkout|console|customer-portal|dashboard|direct|inbox|internal|login|manage|member|messages|my-account|portal|profile|secure|settings|users|workspace|wp-admin)$/
 const GOOGLE_SUFFIX = /^(?:com|cat|[a-z]{2}|(?:co|com)\.[a-z]{2})$/
 const PRIVATE_GOOGLE_HOSTS = new Set([
   "accounts.google.com",
@@ -41,11 +43,13 @@ export function isGoogleMapsUrl(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl)
     const host = canonicalHostname(url)
+    if (!isPublicGoogleSurfaceHost(host)) return false
+    const pathname = canonicalPathname(url)
     return (
-      isPublicGoogleSurfaceHost(host) &&
-      (host.startsWith("maps.") ||
-        url.pathname === "/maps" ||
-        url.pathname.startsWith("/maps/"))
+      pathname === "/maps/search" ||
+      pathname.startsWith("/maps/search/") ||
+      pathname === "/maps/place" ||
+      pathname.startsWith("/maps/place/")
     )
   } catch {
     return false
@@ -98,9 +102,13 @@ export function isPublicLinkedInOrganizationUrl(rawUrl: string): boolean {
 
 export function hasSecretUrlMaterial(url: URL): boolean {
   if (url.username.length > 0 || url.password.length > 0) return true
-  return [...url.searchParams].some(
-    ([key, value]) => isSecretQueryKey(key) || hasNestedSecretMaterial(value),
+  if (
+    [...url.searchParams].some(
+      ([key, value]) => isSecretQueryKey(key) || hasNestedSecretMaterial(value),
+    )
   )
+    return true
+  return url.hash.length > 1 && hasNestedSecretMaterial(url.hash.slice(1))
 }
 
 export function isPrivateRoute(url: URL): boolean {
@@ -109,6 +117,21 @@ export function isPrivateRoute(url: URL): boolean {
 
 export function isAuthenticatedRoute(url: URL): boolean {
   return AUTHENTICATED_ROUTE.test(canonicalPathname(url))
+}
+
+function isPrivateHashRoute(url: URL): boolean {
+  const decoded = decodeRepeatedly(url.hash.slice(1))
+  if (decoded === null) return true
+  const fragment = decoded.toLowerCase()
+  if (
+    fragment.includes("/") ||
+    fragment.includes("=") ||
+    fragment.startsWith("!")
+  ) {
+    const route = `/${fragment.replace(/^!/, "").replace(/[?&#=]+/g, "/")}`
+    return PRIVATE_ROUTE.test(route) || AUTHENTICATED_ROUTE.test(route)
+  }
+  return PRIVATE_FRAGMENT_SEGMENT.test(fragment)
 }
 
 export function sanitizePublicUrl(rawUrl: string): string {
@@ -157,32 +180,47 @@ function isSecretQueryKey(key: string): boolean {
 }
 
 function hasNestedSecretMaterial(value: string): boolean {
-  let decoded = value.replace(/\+/g, " ")
-  for (let pass = 0; pass < 4; pass += 1) {
-    if (/\bbearer\s+[a-z0-9._~+/=-]+/i.test(decoded)) return true
-    if (/\beyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+\b/i.test(decoded))
-      return true
-    for (const match of decoded.matchAll(
-      /(?:^|[?&#;\s])([a-z][a-z0-9_.-]{0,79})\s*=/gi,
-    )) {
-      if (isSecretQueryKey(match[1] ?? "")) return true
-    }
-    try {
-      const next = decodeURIComponent(decoded)
-      if (next === decoded) break
-      decoded = next
-    } catch {
-      break
-    }
+  const decoded = decodeRepeatedly(value.replace(/\+/g, " "))
+  if (decoded === null) return true
+  return hasDecodedSecretMaterial(decoded)
+}
+
+function hasDecodedSecretMaterial(decoded: string): boolean {
+  if (/\bbearer\s+[a-z0-9._~+/=-]+/i.test(decoded)) return true
+  if (/\beyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+\b/i.test(decoded)) return true
+  for (const match of decoded.matchAll(
+    /(?:^|[?&#;\s])([a-z][a-z0-9_.-]{0,79})\s*=/gi,
+  )) {
+    if (isSecretQueryKey(match[1] ?? "")) return true
   }
   return false
+}
+
+function decodeRepeatedly(value: string): string | null {
+  let decoded = value
+  try {
+    for (let pass = 0; pass < 8; pass += 1) {
+      const next = decodeURIComponent(decoded)
+      if (next === decoded) return decoded
+      decoded = next
+    }
+    return decodeURIComponent(decoded) === decoded ? decoded : null
+  } catch {
+    return null
+  }
 }
 
 export function isAllowedPublicSourceUrl(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl)
     if (url.protocol !== "http:" && url.protocol !== "https:") return false
-    if (hasSecretUrlMaterial(url) || isPrivateRoute(url)) return false
+    if (
+      hasSecretUrlMaterial(url) ||
+      isPrivateRoute(url) ||
+      isAuthenticatedRoute(url) ||
+      isPrivateHashRoute(url)
+    )
+      return false
     const host = canonicalHostname(url)
     if (isLinkedInHost(host)) return isPublicLinkedInOrganizationUrl(rawUrl)
     if (PRIVATE_GOOGLE_HOSTS.has(host)) return false
@@ -204,17 +242,10 @@ export function isAllowedPublicSourceUrl(rawUrl: string): boolean {
 }
 
 function canonicalPathname(url: URL): string {
-  let pathname = url.pathname.toLowerCase()
-  for (let pass = 0; pass < 4; pass += 1) {
-    try {
-      const next = decodeURIComponent(pathname)
-      if (next === pathname) break
-      pathname = next
-    } catch {
-      return "/internal/invalid-encoding"
-    }
-  }
-  return pathname.replace(/\/{2,}/g, "/")
+  const pathname = decodeRepeatedly(url.pathname)
+  return pathname === null
+    ? "/internal/invalid-encoding"
+    : pathname.toLowerCase().replace(/\/{2,}/g, "/")
 }
 
 function isPublicBusinessWebsiteRoute(url: URL): boolean {

@@ -3,11 +3,23 @@ import { z } from "zod"
 import { DaemonClient } from "./client"
 import { loadConfig } from "./config"
 import { serializeLeadRecords, writeVerifiedExport } from "./export"
+import type { Tab } from "./schemas"
 import { RequestedSourceSchema, SourceTypeSchema } from "./schemas"
+import { sanitizeTerminalText } from "./tui-text"
 
 const TabIdSchema = z.coerce.number().int().nonnegative()
 const ScrollAmountSchema = z.coerce.number().int().min(100).max(3000)
 const LeadLimitSchema = z.coerce.number().int().min(1).max(25)
+
+export function formatBrowserTab(tab: Tab): string {
+  const marker = tab.selected ? "*" : " "
+  return [
+    marker,
+    String(tab.id),
+    sanitizeTerminalText(tab.title),
+    sanitizeTerminalText(tab.url),
+  ].join("\t")
+}
 
 export function registerBrowserCommands(program: Command): void {
   program
@@ -19,7 +31,7 @@ export function registerBrowserCommands(program: Command): void {
       process.stdout.write(
         options.json
           ? `${JSON.stringify(tabs, null, 2)}\n`
-          : `${tabs.map((tab) => `${tab.id}\t${tab.title}\t${tab.url}`).join("\n")}\n`,
+          : `${tabs.map(formatBrowserTab).join("\n")}\n`,
       )
     })
 

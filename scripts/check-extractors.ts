@@ -376,7 +376,10 @@ assert.equal(
   detectSourceType("https://www.google.co.uk/search?q=coffee"),
   "google-search",
 )
-assert.equal(detectSourceType("https://maps.google.com/"), "google-maps")
+assert.equal(
+  detectSourceType("https://maps.google.com/maps/search/coffee"),
+  "google-maps",
+)
 
 const linkedinContext = await fixture(
   "linkedin-company.html",

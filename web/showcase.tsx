@@ -15,11 +15,13 @@ import { SourceRail } from "./source-rail"
 const tabs = [
   {
     id: 7,
+    selected: true,
     title: "Independent coffee roasters in Pune",
     url: "https://www.google.com/maps/search/coffee+roasters+pune",
   },
   {
     id: 11,
+    selected: false,
     title: "Studio North",
     url: "https://studio-north.example/contact",
   },
